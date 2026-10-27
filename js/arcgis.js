@@ -2,6 +2,7 @@ import {CONFIG} from '../config.js';
 import {checkAbort,clean} from './utils.js';
 import {withDeadline} from './connections.js';
 import {registeredWmsConfig,renderRegisteredWms,WmsError} from './wms.js';
+import {CAMERA_ITEM_TYPES,arcgisItemId,distinctFeatureItems,embeddedCameraCollection,featureQueryUrl} from './portal-features.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 function weatherFailure(role,stage,error){
@@ -18,7 +19,7 @@ function sdk(){if(!modulesPromise)modulesPromise=new Promise((resolve,reject)=>{
 }).then(()=>globalThis.$arcgis.import(['@arcgis/core/identity/OAuthInfo.js','@arcgis/core/identity/IdentityManager.js','@arcgis/core/portal/Portal.js','@arcgis/core/portal/PortalItem.js','@arcgis/core/layers/WMSLayer.js','@arcgis/core/geometry/Extent.js','@arcgis/core/request.js'])).catch(e=>{modulesPromise=null;throw e;});return modulesPromise;}
 export function organisationUrl(prefix){const value=clean(prefix).toLowerCase();if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value))throw new Error('Enter only the organisation prefix, such as yourorg');return 'https://'+value+'.maps.arcgis.com';}
 export class ArcGISConnection {
-  constructor(){this.portal=null;this.layers={};this.choices={};this.districtItem=null;this.cameraItems=[];}
+  constructor(){this.portal=null;this.layers={};this.choices={};this.featureChoices={};this.featureSelections=new Map();this.featureItems=new Map();}
   async connect(prefix,clientId,{resume=false}={}) {
     const [OAuthInfo,identity,Portal,PortalItem,WMSLayer,Extent,esriRequest]=await sdk();this.sdk={OAuthInfo,identity,Portal,PortalItem,WMSLayer,Extent,esriRequest};
     const url=organisationUrl(prefix);if(!/^[A-Za-z0-9_-]{8,128}$/.test(clientId))throw new Error('Enter a valid public ArcGIS OAuth client ID');
@@ -82,19 +83,41 @@ export class ArcGISConnection {
     const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();return this.layers[role].route;
   }
   async verify(signal){await this.verifyRole('warning',signal);await this.verifyRole('radar',signal);}
-  async probeFeature(spec,signal){const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching items; check the layer title and access.':'No accessible layer item was found.');
-    const base=items[0].url?.replace(/\/$/,'');if(!base)throw new Error('Layer item has no service URL');const url=/\/(FeatureServer|MapServer)\/\d+$/i.test(base)?base:base+'/'+spec.layer;
-    const r=await this.sdk.esriRequest(url+'/query',{query:{where:'1=1',returnCountOnly:true,f:'json'},responseType:'json',timeout:20000,signal});checkAbort(signal);if(!Number.isInteger(r.data?.count)||r.data.count<0)throw new Error('Authenticated layer query failed');
+  setFeatureSelection(spec,value){const known=this.featureChoices[spec.key]?.find(item=>item.id===value),id=known?.id||arcgisItemId(value);this.featureSelections.set(spec.key,id);this.featureItems.delete(spec.key);}
+  async featureItem(spec,signal){
+    const key=spec.key||'districts';if(this.featureItems.has(key))return this.featureItems.get(key);
+    const selected=this.featureSelections.get(key);let item;
+    if(selected){item=this.featureChoices[key]?.find(candidate=>candidate.id===selected)||new this.sdk.PortalItem({id:selected,portal:this.portal});}
+    else{
+      for(const title of [spec.title,...(spec.alternatives||[])]){
+        const items=distinctFeatureItems(await this.search([title],spec.key?CAMERA_ITEM_TYPES:undefined,signal),spec.layer);checkAbort(signal);this.featureChoices[key]=items;
+        if(items.length>1)throw new Error('Multiple matching items. Choose the correct source below, then recheck layers.');
+        if(items.length===1){item=items[0];break;}
+      }
+    }
+    if(!item)throw new Error('No accessible layer item was found. Supply its ArcGIS item link below.');
+    if(item.load)await item.load({signal});checkAbort(signal);
+    if(spec.key&&item.type&&!CAMERA_ITEM_TYPES.includes(item.type))throw new Error('Selected item is not a supported camera layer or web map.');
+    this.featureItems.set(key,item);return item;
+  }
+  async cameraCollection(spec,signal){const item=await this.featureItem(spec,signal);
+    return ['Feature Collection','Web Map'].includes(item.type)||!item.url?embeddedCameraCollection(item,spec,this.featureCollection.bind(this),signal):this.featureCollection(item,spec.layer,signal);
+  }
+  async probeFeature(spec,signal){if(spec.key)return this.cameraCollection(spec,signal);const item=await this.featureItem(spec,signal);
+    const url=featureQueryUrl(item.url,spec.layer);
+    const r=await this.sdk.esriRequest(url,{query:{where:'1=1',returnCountOnly:true,f:'json'},responseType:'json',timeout:20000,signal});checkAbort(signal);if(!Number.isInteger(r.data?.count)||r.data.count<0)throw new Error('Authenticated layer query failed');
   }
   async featureCollection(item,layerId,signal){const base=item.url?.replace(/\/$/,'');if(!base)throw new Error('Feature item has no service URL');
     // IdentityManager-aware esriRequest supplies credentials to hosted feature
     // services. Use a query-only request, never copy tokens into configuration.
-    const url=/\/(FeatureServer|MapServer)\/\d+$/i.test(base)?base:base+'/'+layerId,features=[];
-    for(let offset=0;offset<100000;offset+=2000){checkAbort(signal);const result=await this.sdk.esriRequest(url+'/query',{query:{where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,f:'geojson',resultOffset:offset,resultRecordCount:2000},responseType:'json',timeout:20000,signal});const d=result.data;
-      if(d.error||d.type!=='FeatureCollection')throw new Error('Authenticated feature query failed');features.push(...d.features);if(d.features.length<2000&&!d.exceededTransferLimit)return {type:'FeatureCollection',features};
+    const url=featureQueryUrl(base,layerId),features=[],seen=new Set();
+    for(let offset=0;offset<100000;){checkAbort(signal);const result=await this.sdk.esriRequest(url,{query:{where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,f:'geojson',resultOffset:offset,resultRecordCount:2000},responseType:'json',timeout:20000,signal});const d=result.data;
+      if(d.error||d.type!=='FeatureCollection'||!Array.isArray(d.features))throw new Error('Authenticated feature query failed');
+      let added=0;for(const feature of d.features){const id=feature.id??feature.properties?.objectid??feature.properties?.OBJECTID??JSON.stringify(feature);if(seen.has(id))continue;seen.add(id);features.push(feature);added++;}
+      if(d.features.length<2000&&!d.exceededTransferLimit)return {type:'FeatureCollection',features};if(!added)throw new Error('Authenticated feature source did not honour pagination');offset+=d.features.length;
     }throw new Error('Authenticated feature source exceeded the page limit');
   }
-  async districts(signal){const items=await this.search([CONFIG.arcgis.districts.title],undefined,signal);if(items.length!==1)throw new Error(items.length?'District layer is ambiguous':'District layer is unavailable');return this.featureCollection(items[0],CONFIG.arcgis.districts.layer,signal);}
-  async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching camera items; no item selected automatically':'No accessible camera item');return {key:spec.key,label:spec.label,collection:await this.featureCollection(items[0],spec.layer,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
-  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.portal=null;}
+  async districts(signal){return this.featureCollection(await this.featureItem(CONFIG.arcgis.districts,signal),CONFIG.arcgis.districts.layer,signal);}
+  async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{return {key:spec.key,label:spec.label,collection:await this.cameraCollection(spec,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
+  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.featureChoices={};this.featureSelections.clear();this.featureItems.clear();this.portal=null;}
 }

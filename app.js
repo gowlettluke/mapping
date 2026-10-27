@@ -52,16 +52,28 @@ async function makePdf(){const snapshot=state.snapshot;if(!snapshot?.active||sna
   finally{if(run===state.version){state.pdf=null;$('pdfProgress').hidden=true;updateButtons();}}
 }
 const feedCards=new Map();
+function cameraSourceControl(result,card){
+  const spec=CONFIG.arcgis.cameras.find(spec=>'camera-'+spec.key===result.id);card.source?.remove();card.source=null;
+  if(!spec||result.status!=='error'||!(spec.key in connection.featureChoices))return;
+  const candidates=connection.featureChoices[spec.key]||[],group=document.createElement('div');group.className='feed-source';
+  const label=document.createElement('label');label.textContent=candidates.length>1?'Choose the ArcGIS camera source':'ArcGIS camera item link or ID';
+  const input=document.createElement(candidates.length>1?'select':'input');input.setAttribute('aria-label',spec.label+' ArcGIS source');
+  if(candidates.length>1){const blank=document.createElement('option');blank.value='';blank.textContent='Choose the correct source';input.append(blank);for(const item of candidates){const option=document.createElement('option');option.value=item.id;option.textContent=item.title+' ('+(item.owner||'owner unavailable')+')';input.append(option);}}
+  else{input.type='text';input.placeholder='Paste the item-page link from ArcGIS';}
+  input.value=connection.featureSelections.get(spec.key)||'';const button=document.createElement('button');button.textContent='Use item and recheck';button.type='button';
+  button.addEventListener('click',()=>{try{connection.setFeatureSelection(spec,input.value);void verify();}catch(error){card.detail.textContent=errorText(error);}});
+  label.append(input);group.append(label,button);card.element.append(group);card.source=group;
+}
 function showSession(connected){$('connectionPanel').hidden=connected;$('appView').hidden=!connected;$('signOut').hidden=!connected||demo;}
 function updateFeed(result){const previous=state.feedStates.get(result.id)||{};state.feedStates.set(result.id,{...previous,...result});const card=feedCards.get(result.id);if(!card)return;
-  card.element.dataset.status=result.status;card.badge.textContent=({ok:'Connected',error:'Unavailable',checking:'Checking',pending:'Waiting'})[result.status]||'Waiting';card.detail.textContent=result.detail||'';
+  card.element.dataset.status=result.status;card.badge.textContent=({ok:'Connected',error:'Unavailable',checking:'Checking',pending:'Waiting'})[result.status]||'Waiting';card.detail.textContent=result.detail||'';cameraSourceControl(result,card);
   state.ready=state.connected&&readyForMaps(state.feedStates);const values=[...state.feedStates.values()],finished=values.filter(v=>['ok','error'].includes(v.status)).length,errors=values.filter(v=>v.status==='error').length;
   $('connectionStatus').textContent=finished===FEEDS.length?`${finished-errors} connections passed${errors?`; ${errors} need attention`:''}. ${state.ready?'Core map layers are ready.':'Required map layers must connect before generation.'}`:`Checking layer connections: ${finished} / ${FEEDS.length} complete.`;
   if(!state.gen&&!state.snapshot)status(state.ready?'Core map layers are ready. Generate current warning maps.':'Checking the required warning, radar and LGA layers...');updateButtons();
 }
 function resetFeedCards(){state.feedStates.clear();feedCards.clear();$('feedChecks').replaceChildren();for(const feed of FEEDS){const element=document.createElement('article');element.className='feed-card';const title=document.createElement('strong');title.textContent=feed.label+(feed.required?' · required':'');const badge=document.createElement('span');badge.className='badge';const detail=document.createElement('p');element.append(title,badge,detail);$('feedChecks').append(element);feedCards.set(feed.id,{element,badge,detail});updateFeed({id:feed.id,status:'pending',detail:'Waiting to check...'});}}
 function weatherChoices(){let needsChoice=false;for(const role of ['warning','radar']){const items=connection.choices[role]||[],select=$(role+'Item'),selected=select.value;select.replaceChildren();if(items.length!==1){needsChoice=true;const option=document.createElement('option');option.value='';option.textContent=items.length?'Choose the correct portal item':'No accessible item found';select.append(option);}for(const item of items){const option=document.createElement('option');option.value=item.id;option.textContent=item.title+' ('+item.owner+')';select.append(option);}if(items.some(item=>item.id===selected))select.value=selected;}$('layerChoices').hidden=!needsChoice;}
-async function verify(){if(!state.connected||demo)return;state.checkController?.abort();const controller=new AbortController(),run=++state.checkVersion;state.checkController=controller;state.ready=false;invalidate();$('verifyFeeds').disabled=true;resetFeedCards();
+async function verify(){if(!state.connected||demo)return;state.checkController?.abort();connection.featureItems.clear();const controller=new AbortController(),run=++state.checkVersion;state.checkController=controller;state.ready=false;invalidate();$('verifyFeeds').disabled=true;resetFeedCards();
   const current=()=>run===state.checkVersion&&state.connected&&!controller.signal.aborted;
   try{
     try{await withDeadline(signal=>connection.discoverWeather(signal),controller.signal);}

@@ -1,10 +1,11 @@
 import {CONFIG} from '../config.js';
 import {projectedBounds,geographicBounds,fitExtent,contains,lgaName,path,transform} from './geometry.js';
 import {warningCanvas,analyseCanvas,components,maskContains,rasterIntersects} from './raster.js';
-import {lgas,loadPublic,queryArcgis,cached,majorNames} from './sources.js';
+import {lgas,loadPublic,majorNames} from './sources.js';
 import {basemap,composeProducts,exportProducts} from './renderer.js';
 import {normaliseRoads,powerHealth,buildReport} from './report.js';
 import {aest,checkAbort} from './utils.js';
+import {floodReference} from './flood-references.js';
 export function warningLgas(collection,masks){return collection.features.filter(f=>masks.some(m=>rasterIntersects(m,f.geometry)));}
 async function scan(connection,names,titles,extent,boundary,width,height,signal){const im=await connection.render('warning',extent,width,height,names,titles,signal),c=warningCanvas(im,width,height,extent,boundary);im.close?.();return {...analyseCanvas(c,extent),canvas:c};}
 export async function scanFloods(connection,signal,onProgress=()=>{}){
@@ -12,7 +13,7 @@ export async function scanFloods(connection,signal,onProgress=()=>{}){
   for(const [index,key] of ['floodWarnings','floodWatches'].entries()){
     checkAbort(signal);const names=[CONFIG.profiles.flooding.warning[index]],titles=[CONFIG.profiles.flooding.titles[index]],kind=index?'Flood Watch':'Flood Warning';onProgress('Scanning '+kind+' areas...');
     const detected=await scan(connection,names,titles,extent,boundary,w,h,signal);if(!detected.active)continue;
-    let refs={features:[]};try{refs=await cached(key,()=>queryArcgis(CONFIG.publicSources[key],{signal}));}catch{}
+    let refs={features:[]};try{refs=(await floodReference(key,signal)).collection;}catch{checkAbort(signal);}
     const groups=new Map();components(detected.mask).forEach((component,i)=>{const ref=refs.features.find(f=>contains(component.sample,f.geometry)),p=ref?.properties||{},id=p.product_id||p.PRODUCT_ID||'',title=p.dist_name||p.DIST_NAME||warningLgas(boundary,[component.mask]).map(lgaName).slice(0,2).join(' / '),groupKey=id||'area:'+i;
       if(!groups.has(groupKey))groups.set(groupKey,{id:key+':'+groupKey,title:kind+' - '+(title||'detected area '+(i+1)),kind,names,titles,components:[],identified:Boolean(id),extent:component.extent});
       const group=groups.get(groupKey);group.components.push(component);group.extent=[Math.min(group.extent[0],component.extent[0]),Math.min(group.extent[1],component.extent[1]),Math.max(group.extent[2],component.extent[2]),Math.max(group.extent[3],component.extent[3])];

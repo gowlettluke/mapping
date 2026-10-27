@@ -95,10 +95,14 @@ footer p{margin:3px 0}
 .login-gate button{width:100%;min-height:40px;margin-top:16px}
 .login-gate #loginStatus{margin-bottom:0;color:var(--muted);font-size:12px}
 .feed-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.feed-card{border:1px solid var(--line);padding:10px;background:var(--panel2);display:flex;align-items:flex-start;justify-content:space-between;gap:5px;flex-wrap:wrap}
+.feed-card{border:1px solid var(--line);padding:10px;background:var(--panel2);display:flex;align-items:flex-start;align-content:flex-start;justify-content:space-between;gap:5px;flex-wrap:wrap}
 .feed-card strong{font-size:12px}
 .feed-card p{width:100%;font-size:11px;color:var(--muted);margin:2px 0 0;overflow-wrap:anywhere}
 .feed-card .badge{min-height:21px;font-size:9px;padding:2px 6px}
+.feed-source{width:100%;min-width:0;display:grid;gap:6px;margin-top:5px}
+.feed-source label{display:grid;gap:4px;font-size:11px;min-width:0}
+.feed-source input,.feed-source select{width:100%;min-width:0;font-size:11px}
+.feed-source button{justify-self:start;font-size:11px}
 .feed-card[data-status=ok]{border-left:3px solid var(--green)}
 .feed-card[data-status=ok] .badge{background:var(--green-soft);color:var(--green);border-color:var(--green)}
 .feed-card[data-status=error]{border-left:3px solid var(--amber)}

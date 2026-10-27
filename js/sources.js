@@ -3,13 +3,13 @@ import {json,isCollection,errorText} from './utils.js';
 import {contains,bounds,overlap} from './geometry.js';
 const cache=new Map();
 export function cached(key,fn){if(!cache.has(key))cache.set(key,Promise.resolve().then(fn).catch(e=>{cache.delete(key);throw e;}));return cache.get(key);}
-export async function queryArcgis(url,{where='1=1',fields='*',extent=null,offset=0,limit=2000,simplify=0,signal}={}){
+export async function queryArcgis(url,{where='1=1',fields='*',extent=null,offset=0,limit=2000,simplify=0,signal,timeout=22000}={}){
   const result=[],seen=new Set();
   for(let page=0;page<50;page++){
     const q=new URL(url.replace(/\/$/,'')+'/query');Object.entries({where,outFields:fields,returnGeometry:'true',outSR:'4326',f:'geojson',resultOffset:String(offset+page*limit),resultRecordCount:String(limit)}).forEach(([k,v])=>q.searchParams.set(k,v));
     if(extent){q.searchParams.set('geometry',extent.join(','));q.searchParams.set('geometryType','esriGeometryEnvelope');q.searchParams.set('inSR','4326');q.searchParams.set('spatialRel','esriSpatialRelIntersects');}
     if(simplify)q.searchParams.set('maxAllowableOffset',String(simplify));
-    const d=await json(q.href,{signal});if(!isCollection(d))throw new Error('Reference source did not return GeoJSON polygons/features');
+    const d=await json(q.href,{signal,timeout});if(!isCollection(d))throw new Error('Reference source did not return GeoJSON polygons/features');
     let added=0;for(const f of d.features){const id=f.id??f.properties?.objectid??f.properties?.OBJECTID??JSON.stringify(f);if(seen.has(id))continue;seen.add(id);result.push(f);added++;}
     if(d.features.length<limit&&!d.exceededTransferLimit)return {type:'FeatureCollection',features:result};
     if(!added)throw new Error('Reference source did not honour pagination; incomplete data rejected');

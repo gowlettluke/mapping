@@ -3,6 +3,7 @@ import {json,isCollection,checkAbort,abortError,pooled,errorText} from './utils.
 import {lgas,locator,majorNames} from './sources.js';
 import {normaliseCameras} from './cameras.js';
 import {powerHealth} from './report.js';
+import {floodReference} from './flood-references.js';
 
 export const FEEDS=[
   {id:'warning',label:'Warning WMS',required:true},
@@ -15,8 +16,8 @@ export const FEEDS=[
   {id:'trafficCameras',label:'TMR traffic cameras'},
   ...CONFIG.arcgis.cameras.map(s=>({id:'camera-'+s.key,label:s.label})),
   {id:'districts',label:'Disaster districts'},
-  {id:'floodWarnings',label:'Flood warning references'},
-  {id:'floodWatches',label:'Flood watch references'}
+  {id:'floodWarnings',label:'Flood warning catchment names'},
+  {id:'floodWatches',label:'Flood watch catchment names'}
 ];
 export const readyForMaps=states=>FEEDS.filter(f=>f.required).every(f=>states.get(f.id)?.status==='ok');
 
@@ -55,10 +56,9 @@ export async function checkLayerConnections(connection,{warningId,radarId,signal
     {id:'border',run:s=>countLayer(src.border,s)},
     {id:'basemap',run:async s=>{const d=await json(src.topoMetadata+'?f=json',{signal:s});if(!d.tileInfo)throw new Error('Basemap tile service metadata unavailable');return 'Tile service connected; tiles load during generation';}},
     {id:'trafficCameras',run:async s=>{try{normaliseCameras(await json(src.trafficCameras,{signal:s,timeout:12000}),'tmr','TMR');return 'Camera list connected; photographs load on request';}catch(error){checkAbort(s);await countLayer(src.cameraFallback,s);return 'Fallback camera list connected; photographs load on request';}}},
-    ...CONFIG.arcgis.cameras.map(spec=>({id:'camera-'+spec.key,run:async s=>{await connection.probeFeature(spec,s);return 'Authenticated camera layer connected';}})),
+    ...CONFIG.arcgis.cameras.map(spec=>({id:'camera-'+spec.key,run:async s=>{const cameras=await connection.probeFeature(spec,s);if(cameras.features.length&&!normaliseCameras(cameras,spec.key,spec.label).length)throw new Error('Camera source returned no usable image links and point locations.');return 'Authenticated camera layer connected';}})),
     {id:'districts',run:async s=>{await connection.probeFeature(CONFIG.arcgis.districts,s);return 'Authenticated district layer connected';}},
-    {id:'floodWarnings',run:s=>countLayer(src.floodWarnings,s)},
-    {id:'floodWatches',run:s=>countLayer(src.floodWatches,s)}
+    ...['floodWarnings','floodWatches'].map(key=>({id:key,run:async s=>{const result=await floodReference(key,s);return result.mode==='bundled'?'Bundled BoM catchment reference boundaries · '+new Date(result.retrievedAt).toLocaleDateString('en-AU',{timeZone:'Australia/Brisbane'}):'Current BoM catchment reference boundaries connected';}}))
   ];
   return executeChecks(jobs,{signal,onUpdate});
 }

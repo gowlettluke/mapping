@@ -1,0 +1,23 @@
+{
+  "retrievedUtc": "2026-10-27T12:26:39.288415+00:00",
+  "description": "Static Queensland catchment-name boundaries, not active warnings or watches. Source polygon geometry requested at five decimal places; no polygon simplification.",
+  "attribution": "\u00a9 Commonwealth of Australia (Bureau of Meteorology) 2025",
+  "files": {
+    "floodWarnings": {
+      "path": "flood-warning-catchments.geojson.gz",
+      "source": "https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/1/query",
+      "where": "aac LIKE 'QLD_%'",
+      "featureCount": 148,
+      "sha256": "a80a61e595b2fbe9e7f25a129b2347f4d39ebe63c9c22fd87b328dbab03c9685",
+      "gzipSha256": "b92c10e30a1a81d899f57214c4d9052365304d9cf5a791ffd79e6f3deb46bb34"
+    },
+    "floodWatches": {
+      "path": "flood-watch-catchments.geojson.gz",
+      "source": "https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/0/query",
+      "where": "aac LIKE 'QLD_%'",
+      "featureCount": 74,
+      "sha256": "26459fb76d20ff08238880261096a281af5e92c2e95d675bdad5efbaa4abb37b",
+      "gzipSha256": "b8d93a517a1914033bc194c9d3ec910bf49d5c9a004d2d4d16e205e9653b4864"
+    }
+  }
+}

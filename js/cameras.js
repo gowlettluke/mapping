@@ -7,11 +7,11 @@ export function captureTime(props){for(const [key,value] of Object.entries(props
 export function safeUrl(raw){try{const u=new URL(String(raw));return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}}
 export function externalPhotoLink(raw){const url=safeUrl(raw);if(!url)return '';const u=new URL(url);return [...u.searchParams.keys()].some(k=>/token|api.?key|signature|^sig$|^key$|x-amz|credential/i.test(k))?'':url;}
 export function normaliseCameras(payload,source,label){const rows=Array.isArray(payload)?payload:payload.features||payload.webcams||payload.data||[];if(!Array.isArray(rows))throw new Error(label+' returned an unknown camera format');
-  return rows.map((f,index)=>{const p=f.properties||f,point=f.geometry?.type==='Point'?f.geometry.coordinates:
+  return rows.map((f,index)=>{const p=f.properties||f,aliases=Object.fromEntries(Object.entries(p).map(([k,v])=>[k.toLowerCase().replace(/[^a-z0-9]/g,''),v])),point=f.geometry?.type==='Point'?f.geometry.coordinates:
     [Number(p.longitude??p.lon??p.lng??p.location?.longitude),Number(p.latitude??p.lat??p.location?.latitude)];
-    const url=safeUrl(p.image_url||p.imageUrl||p.still_image_url||p.stillImageUrl||p.image?.url||p.camera_url||p.webcam_url||p.url||p.URL||p.Image_URL);
-    return {id:source+':'+(p.camera_id??p.id??p.objectid??f.id??index),source,sourceLabel:label,name:clean(p.Location_Name||p.location_name||p.description||p.name||p.title||'Camera '+(index+1)),point,url,capturedAt:captureTime(p)};
-  }).filter(c=>c.url&&c.point.length>=2&&c.point.every(Number.isFinite));
+    const url=safeUrl(p.image?.url||aliases.imageurl||aliases.stillimageurl||aliases.cameraurl||aliases.webcamurl||aliases.photourl||p.url||p.URL);
+    return {id:source+':'+(p.camera_id??p.id??p.objectid??f.id??index),source,sourceLabel:label,name:clean(p.Location_Name||p.location_name||p.description||p.name||p.title||aliases.cameraname||aliases.sitename||aliases.locationname||'Camera '+(index+1)),point,url,capturedAt:captureTime(p)};
+  }).filter(c=>c.url&&c.point.length>=2&&c.point.every(Number.isFinite)&&Math.abs(c.point[0])<=180&&Math.abs(c.point[1])<=90);
 }
 export function selectCameras(cameras,masks){const seen=new Set();return cameras.filter(c=>{
   if(!masks.some(mask=>maskContains(mask,c.point)))return false;const u=new URL(c.url);for(const k of ['_','timestamp','cacheBust'])u.searchParams.delete(k);const key=u.href;

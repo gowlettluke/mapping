@@ -11,9 +11,9 @@ All configured URLs are in `config.js`. Service accessibility and schema must be
 | Queensland locator | Mainland geometry from Geographical Features layer 90, with separate Foundation Data coast layer 55 and state border layer 5. LGA polygons are used for analysis, not the locator silhouette. |
 | Outages | Separate `gowlettluke/qldpoweroutages` current-outage GeoJSON and run manifest. Canonical fields include `provider_code`, `outage_id`, `outage_type`, `affected_customers`, `affected_customers_known`, `snapshot_utc`. Requires fresh matching metadata, record counts and provider success. |
 | Roads | Public QLDTraffic events GeoJSON. Major-road names are checked against Foundation Data layer 23 (Motorway/Highway). Full closures appear in report text; restrictions remain map information. |
-| Cameras | QLDTraffic public webcams, State Road Information layer 4 fallback, and signed-in TMR/BCC feature portal items. Image URLs and geometry are normalised. Matching uses warning pixels rather than the padded map extent. |
+| Cameras | QLDTraffic public webcams, State Road Information layer 4 fallback, and signed-in TMR/BCC portal items (Feature Service, Map Service, Feature Collection or Web Map). Preferred names are checked before alternatives; distinct ambiguous items require a source choice. Image URLs and geometry are normalised. Matching uses warning pixels rather than the padded map extent. |
 | Districts | Signed-in item `District_Disaster_Management_Groups_DDMG_Boundary_Status_Url`, layer 0, `PROP_DD`. Optional to map/report generation. |
-| Flood references | Public BoM National Flood Gauge Network warning/watch catchment layers. Product identification is best effort; unidentified connected areas stay separate. |
+| Flood references | Public BoM National Flood Gauge Network warning/watch catchment layers, with verified bundled Queensland geometry when browser requests are blocked. The 27 October 2026 snapshot contains 148 warning catchments and 74 watch catchments. These are static reference boundaries, never active warning data. Product identification remains best effort; unidentified connected areas stay separate. |
 | Background | Esri World Topographic Map tiles. Credits are read from service metadata, with a fallback attribution. If unavailable, boundary context is labelled. |
 
 Outage reports concern all unplanned outages affecting an LGA intersected by the warning. They do not claim that every outage itself lies under a warning pixel, or that the weather caused it. An outage crossing LGA boundaries has no defensible customer allocation unless the source supplies one; it is reported as a shared total without duplicating customers in LGA totals. Partial source failures are shown beside the report, not copied as fictitious no-impact statements.
@@ -28,6 +28,8 @@ Relevant primary SDK documentation:
 - <https://github.com/parallax/jsPDF>
 
 No third-party imagery or live observations are bundled as operational data. `demo.html` uses fictional synthetic fixtures and marks its output accordingly.
+
+Bundled catchment geometry is attributed to © Commonwealth of Australia (Bureau of Meteorology) 2025. `data/flood-references.json` records the official query endpoints, Queensland filter, retrieval time, feature counts and SHA-256 hashes. The source polygon geometry is retained at five decimal places without simplification; gzip only reduces transfer size. Both the live and bundled routes filter to Queensland catchments. Hash/count/shape validation failures are rejected. `scripts/refresh-flood-references.py` refreshes both complete datasets before replacing the local files. Connection checks and flood-name matching share the same loader so a successful check verifies the data actually used by the application.
 
 ## Registered WMS rendering
 
