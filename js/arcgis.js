@@ -1,6 +1,15 @@
 import {CONFIG} from '../config.js';
 import {checkAbort,clean} from './utils.js';
 let modulesPromise;
+const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function weatherFailure(role,stage,error){
+  if(error?.name==='AbortError')return error;
+  // SDK errors can contain service URLs, request options and credentials.
+  // Display only the phase and an HTTP status, never the original payload.
+  const status=Number(error?.details?.httpStatus);
+  const reason=status>=400&&status<=599?`HTTP ${status}`:'request blocked or service unreachable';
+  return new Error(`${role==='warning'?'Warning':'Radar'} ${stage} failed (${reason}). Sign-in succeeded; private service access has not been verified.`);
+}
 function sdk(){if(!modulesPromise)modulesPromise=new Promise((resolve,reject)=>{
   if(globalThis.$arcgis)return resolve();const script=document.createElement('script');script.type='module';script.src=CONFIG.arcgis.sdk;script.onload=resolve;script.onerror=()=>reject(new Error('ArcGIS SDK could not load'));document.head.append(script);
 }).then(()=>globalThis.$arcgis.import(['@arcgis/core/identity/OAuthInfo.js','@arcgis/core/identity/IdentityManager.js','@arcgis/core/portal/Portal.js','@arcgis/core/portal/PortalItem.js','@arcgis/core/layers/WMSLayer.js','@arcgis/core/geometry/Extent.js','@arcgis/core/request.js'])).catch(e=>{modulesPromise=null;throw e;});return modulesPromise;}
@@ -18,13 +27,31 @@ export class ArcGISConnection {
   async discoverWeather(signal){const results=await Promise.allSettled(['warning','radar'].map(role=>this.search([CONFIG.arcgis.items[role]],'WMS',signal)));checkAbort(signal);
     ['warning','radar'].forEach((role,i)=>{this.choices[role]=results[i].status==='fulfilled'?results[i].value:[];});return this.choices;
   }
-  async search(titles,type='Feature Service',signal) {
-    const matches=new Map();for(const title of titles){checkAbort(signal);const escaped=title.replace(/["\\]/g,'');const r=await this.portal.queryItems({query:`title:"${escaped}" AND type:"${type}"`,num:100,sortField:'modified',sortOrder:'desc'});checkAbort(signal);
-      for(const item of r.results)if(titles.some(t=>item.title.toLowerCase()===t.toLowerCase()))matches.set(item.id,item);
+  async search(titles,type=['Feature Service','Map Service'],signal) {
+    const types=Array.isArray(type)?type:[type],typeQuery='('+types.map(t=>`type:"${t.replace(/["\\]/g,'')}"`).join(' OR ')+')';
+    const wanted=new Set(titles.map(itemTitle)),matches=new Map();
+    for(const title of titles){
+      checkAbort(signal);const escaped=title.replace(/["\\]/g,'');
+      const queries=[`title:"${escaped}"`];
+      // Portal tokenizes underscores and punctuation differently between items.
+      // A token fallback still requires an exact normalized title match below.
+      const words=title.match(/[A-Za-z0-9]+/g)||[];
+      if(words.length)queries.push(words.map(word=>`title:"${word}"`).join(' AND '));
+      let foundTitle=false;
+      for(const titleQuery of [...new Set(queries)]){
+        const r=await this.portal.queryItems({query:`(${titleQuery}) AND ${typeQuery}`,num:100,sortField:'modified',sortOrder:'desc'});checkAbort(signal);
+        for(const item of r.results)if(wanted.has(itemTitle(item.title))){matches.set(item.id,item);if(itemTitle(item.title)===itemTitle(title))foundTitle=true;}
+        if(foundTitle)break;
+      }
     }return [...matches.values()];
   }
   async bind(role,id,signal){checkAbort(signal);const item=this.choices[role]?.find(i=>i.id===id);if(!item)throw new Error(this.choices[role]?.length?'Select the correct '+role+' item below, then recheck layers.':'No accessible '+role+' WMS item was found. Check sharing and access.');
-    const layer=new this.sdk.WMSLayer({portalItem:item,imageFormat:'image/png',imageTransparency:true});await layer.load();
+    // Load private metadata through the signed-in portal, then let the SDK use
+    // the item's registered service and credential handling. Do not substitute
+    // a public endpoint or copy a token into a URL/header ourselves.
+    try{if(item.load)await item.load({signal});checkAbort(signal);}catch(error){throw weatherFailure(role,'private item metadata',error);}
+    const layer=new this.sdk.WMSLayer({portalItem:item,imageFormat:'image/png',imageTransparency:true});
+    try{await layer.load({signal});}catch(error){layer.destroy();throw weatherFailure(role,'service capabilities',error);}
     if(signal?.aborted){layer.destroy();checkAbort(signal);}this.layers[role]?.base.destroy();
     this.layers[role]={base:layer,all:[...(layer.allSublayers?.toArray()||layer.sublayers?.toArray()||[])]};
   }
@@ -38,6 +65,7 @@ export class ArcGISConnection {
       base.sublayers=selected.map(s=>{const clone=s.clone();clone.visible=true;return clone;});
       const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,30000);
       try{return await base.fetchImage(new this.sdk.Extent({xmin:extent[0],ymin:extent[1],xmax:extent[2],ymax:extent[3],spatialReference:{wkid:3857}}),width,height,{signal:controller.signal});}
+      catch(error){throw weatherFailure(role,'map image',error);}
       finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
     });this.serial[role]=operation;return operation;
   }
@@ -45,7 +73,7 @@ export class ArcGISConnection {
     const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();
   }
   async verify(signal){await this.verifyRole('warning',signal);await this.verifyRole('radar',signal);}
-  async probeFeature(spec,signal){const items=await this.search([spec.title,...(spec.alternatives||[])],'Feature Service',signal);if(items.length!==1)throw new Error(items.length?'Multiple matching items; check the layer title and access.':'No accessible layer item was found.');
+  async probeFeature(spec,signal){const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching items; check the layer title and access.':'No accessible layer item was found.');
     const base=items[0].url?.replace(/\/$/,'');if(!base)throw new Error('Layer item has no service URL');const url=/\/(FeatureServer|MapServer)\/\d+$/i.test(base)?base:base+'/'+spec.layer;
     const r=await this.sdk.esriRequest(url+'/query',{query:{where:'1=1',returnCountOnly:true,f:'json'},responseType:'json',timeout:20000,signal});checkAbort(signal);if(!Number.isInteger(r.data?.count)||r.data.count<0)throw new Error('Authenticated layer query failed');
   }
@@ -57,7 +85,7 @@ export class ArcGISConnection {
       if(d.error||d.type!=='FeatureCollection')throw new Error('Authenticated feature query failed');features.push(...d.features);if(d.features.length<2000&&!d.exceededTransferLimit)return {type:'FeatureCollection',features};
     }throw new Error('Authenticated feature source exceeded the page limit');
   }
-  async districts(signal){const items=await this.search([CONFIG.arcgis.districts.title]);if(items.length!==1)throw new Error(items.length?'District layer is ambiguous':'District layer is unavailable');return this.featureCollection(items[0],CONFIG.arcgis.districts.layer,signal);}
-  async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{const items=await this.search([spec.title,...(spec.alternatives||[])]);if(items.length!==1)throw new Error(items.length?'Multiple matching camera items; no item selected automatically':'No accessible camera item');return {key:spec.key,label:spec.label,collection:await this.featureCollection(items[0],spec.layer,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
+  async districts(signal){const items=await this.search([CONFIG.arcgis.districts.title],undefined,signal);if(items.length!==1)throw new Error(items.length?'District layer is ambiguous':'District layer is unavailable');return this.featureCollection(items[0],CONFIG.arcgis.districts.layer,signal);}
+  async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching camera items; no item selected automatically':'No accessible camera item');return {key:spec.key,label:spec.label,collection:await this.featureCollection(items[0],spec.layer,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
   disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base.destroy();this.layers={};this.choices={};this.serial={};this.portal=null;}
 }

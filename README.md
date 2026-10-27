@@ -20,6 +20,8 @@ For live operation, the entry page asks only for your ArcGIS organisation prefix
 
 The connection panel checks warning/radar rendering, LGA coverage, both outage providers, traffic events and major-road names, coast/border/locator sources, basemap metadata, camera lists and authenticated camera/district queries, plus flood reference layers. It does not fetch camera photographs. Warning, radar and LGAs must pass before map generation is enabled; optional failures are reported separately. Checks have deadlines and are cancelled on sign-out or a superseding check. No layer requests are made before sign-in, except in the separate synthetic demo which uses no live connections.
 
+Private warning/radar items stay on the authenticated ArcGIS SDK path. A successful portal login alone does not prove the backing WMS can be reached. Weather failures identify private item metadata, service capabilities or map image requests, and show an HTTP status when the browser makes one available. These messages exclude request URLs and credentials. To investigate a remaining failure, provide the ArcGIS **item details page link** and the connection-panel message; never send tokens, private API keys or passwords. Camera/district discovery accepts Feature Service and Map Service items with equivalent punctuation in their titles, and does not automatically choose between multiple matching items.
+
 **Live authenticated warning/radar rendering and organisational camera/district layers have not been verified with your account.** Do the checks in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) before operational use. A successful offline demo does not establish that the private connections work.
 
 ## Included behaviour
