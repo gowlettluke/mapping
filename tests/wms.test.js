@@ -50,6 +50,7 @@ test('print specification is a transparent map-only overlay and crops expanded e
   assert.deepEqual(webMap.mapOptions.extent,{xmin:-50,ymin:0,xmax:150,ymax:100,spatialReference:{wkid:3857}});
   const layer=webMap.operationalLayers[0];assert.equal(layer.itemId,item.id);assert.equal(layer.transparentBackground,true);
   assert.equal(layer.customParameters.vendor,'shared');assert.equal(new URL(layer.url).searchParams.get('route'),'kept');
+  assert.equal(new URL(layer.url).searchParams.get('version'),layer.version);assert.equal(new URL(layer.url).searchParams.get('transparent'),'TRUE');
 });
 test('readable direct images do not invoke a print service and requests use SDK credentials',async()=>{
   const calls=[],source=image();

@@ -96,11 +96,12 @@ export function wmsPrintMap(config,layers,extent,width,height){
   const url=mapUrl(config),names=layers.map(layer=>layer.name),styles=selectedStyles(config,layers);
   // STYLES/LAYERS are selected per render; all other registered parameters
   // remain on the URL as well as in the web-map definition.
-  for(const name of [...url.searchParams.keys()])if(['layers','styles','bbox','width','height','request','crs','srs'].includes(name.toLowerCase()))url.searchParams.delete(name);
+  const operationFields=['service','version','format','transparent','layers','styles','bbox','width','height','request','crs','srs'];
+  for(const name of [...url.searchParams.keys()])if(operationFields.includes(name.toLowerCase()))url.searchParams.delete(name);
   // Carry native selection in both representations for print services that
   // consume only the URL; duplicate standard fields then have equal values.
-  setParameter(url,'LAYERS',names.join(','));setParameter(url,'STYLES',styles.join(','));
-  const printParameters=value=>Object.fromEntries(entries(value).filter(([key])=>!['layers','styles','bbox','width','height','request','crs','srs'].includes(key.toLowerCase())));
+  for(const [key,value] of Object.entries({service:'WMS',version:config.version,format:'image/png',transparent:'TRUE',layers:names.join(','),styles:styles.join(',')}))setParameter(url,key,value);
+  const printParameters=value=>Object.fromEntries(entries(value).filter(([key])=>!operationFields.includes(key.toLowerCase())));
   const webMap={mapOptions:{extent:{xmin:e[0],ymin:e[1],xmax:e[2],ymax:e[3],spatialReference:{wkid:3857}},spatialReference:{wkid:3857},background:{color:[0,0,0,0]}},
     operationalLayers:[{id:config.itemId,itemId:config.itemId,type:'wms',layerType:'WMS',url:url.href,mapUrl:url.href,version:config.version,
       customParameters:printParameters(config.customParameters),customLayerParameters:printParameters(config.customLayerParameters),layers:names.map(name=>({name})),visibleLayers:names,styles,
