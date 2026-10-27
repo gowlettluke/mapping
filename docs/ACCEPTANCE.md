@@ -20,7 +20,7 @@ The unit suite covers geometry projection and holes, true intersection, context 
 
 Before using a new deployment with live data, verify:
 
-1. OAuth redirects back to the correct HTTPS page and sign out clears the app's connected state. Both selected registered WMS items render through the signed-in session.
+1. The initial page shows only the organisation-prefix sign-in form, with no app controls or OAuth client-ID field. OAuth redirects to ArcGIS and back to the correct HTTPS page. The app then opens and automatically checks connections. Both registered WMS items render through the signed-in session; unique items require no manual selection. Sign out during checks and confirm the prefix page returns without late results reopening the app. An expired session must also return to the prefix form. Missing optional layers must remain visible in the app without disabling successfully verified core map layers.
 2. Compare current BoM warning extents with the map, including warnings near the coast and Queensland border. Both exports must show the same warning outline and surrounding regional context; LGA lines must stay inside the frame. The locator silhouette must follow the state coast/border.
 3. Cross-check outage totals against the same feed snapshot. Include only unplanned outages affecting warning-intersected LGAs. Check shared and unknown totals; missing/stale provider data must produce a status note rather than a no-outage claim.
 4. Compare the road text against QLDTraffic: major full closures, the LGA, road name and concise closure location. Lane reductions and 4WD-only access must not enter copied road text. Paste into the intended report editor and verify the three source links remain clickable.
@@ -29,3 +29,7 @@ Before using a new deployment with live data, verify:
 7. Cancel generation and change tabs while work is running. Old report/camera results must not replace the newly selected scope. Test a no-warning state and an unavailable optional feed.
 
 The offline demo validates application composition with synthetic inputs. It cannot validate credentials, registered WMS proxy handling, private item permissions, live layer names, current provider schema, browser cross-origin access, or the meteorological accuracy of a warning.
+
+## Login-flow revision — 27 October 2026
+
+All 27 unit checks and syntax/asset checks passed. Additional Chromium checks, using an explicitly mocked ArcGIS SDK and public feeds, verified the prefix-only entry page, no pre-authentication layer requests, the configured public OAuth ID, automatic connection checks after authentication, required and optional connection failures, ambiguous weather selection, sign-out cancellation, cancelled sign-in, expired-session recovery, mobile layout and continued offline demo generation. Desktop and mobile screenshots were inspected. These mocks validate application sequencing and failure handling; live ArcGIS authorisation and private services remain unverified.

@@ -1,6 +1,5 @@
 import {CONFIG} from '../config.js';
 import {checkAbort,clean} from './utils.js';
-import {queryArcgis} from './sources.js';
 let modulesPromise;
 function sdk(){if(!modulesPromise)modulesPromise=new Promise((resolve,reject)=>{
   if(globalThis.$arcgis)return resolve();const script=document.createElement('script');script.type='module';script.src=CONFIG.arcgis.sdk;script.onload=resolve;script.onerror=()=>reject(new Error('ArcGIS SDK could not load'));document.head.append(script);
@@ -14,17 +13,19 @@ export class ArcGISConnection {
     const info=new OAuthInfo({appId:clientId,portalUrl:url,popup:false,flowType:'authorization-code',authNamespace:'qld-warning-reconstructed'});identity.registerOAuthInfos([info]);
     if(resume)await identity.checkSignInStatus(url+'/sharing');else await identity.getCredential(url+'/sharing');
     this.portal=new Portal({url,authMode:'immediate'});await this.portal.load();
-    const discovered=await Promise.all(['warning','radar'].map(async role=>[role,await this.search([CONFIG.arcgis.items[role]],'WMS')]));
-    for(const [role,items] of discovered){if(!items.length)throw new Error('The signed-in account cannot find '+CONFIG.arcgis.items[role]);this.choices[role]=items;}
-    return {user:this.portal.user?.fullName||this.portal.user?.username||'Signed in',choices:this.choices};
+    return {user:this.portal.user?.fullName||this.portal.user?.username||'Signed in'};
   }
-  async search(titles,type='Feature Service') {
-    const matches=new Map();for(const title of titles){const escaped=title.replace(/["\\]/g,'');const r=await this.portal.queryItems({query:`title:"${escaped}" AND type:"${type}"`,num:100,sortField:'modified',sortOrder:'desc'});
+  async discoverWeather(signal){const results=await Promise.allSettled(['warning','radar'].map(role=>this.search([CONFIG.arcgis.items[role]],'WMS',signal)));checkAbort(signal);
+    ['warning','radar'].forEach((role,i)=>{this.choices[role]=results[i].status==='fulfilled'?results[i].value:[];});return this.choices;
+  }
+  async search(titles,type='Feature Service',signal) {
+    const matches=new Map();for(const title of titles){checkAbort(signal);const escaped=title.replace(/["\\]/g,'');const r=await this.portal.queryItems({query:`title:"${escaped}" AND type:"${type}"`,num:100,sortField:'modified',sortOrder:'desc'});checkAbort(signal);
       for(const item of r.results)if(titles.some(t=>item.title.toLowerCase()===t.toLowerCase()))matches.set(item.id,item);
     }return [...matches.values()];
   }
-  async bind(role,id){const item=this.choices[role]?.find(i=>i.id===id);if(!item)throw new Error('Select an accessible '+role+' portal item');
+  async bind(role,id,signal){checkAbort(signal);const item=this.choices[role]?.find(i=>i.id===id);if(!item)throw new Error(this.choices[role]?.length?'Select the correct '+role+' item below, then recheck layers.':'No accessible '+role+' WMS item was found. Check sharing and access.');
     const layer=new this.sdk.WMSLayer({portalItem:item,imageFormat:'image/png',imageTransparency:true});await layer.load();
+    if(signal?.aborted){layer.destroy();checkAbort(signal);}this.layers[role]?.base.destroy();
     this.layers[role]={base:layer,all:[...(layer.allSublayers?.toArray()||layer.sublayers?.toArray()||[])]};
   }
   async render(role,extent,width,height,names,titles=[],signal){checkAbort(signal);if(!this.layers[role])throw new Error('Connect and verify the '+role+' layer first');
@@ -40,7 +41,14 @@ export class ArcGISConnection {
       finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
     });this.serial[role]=operation;return operation;
   }
-  async verify(signal){const e=[15330000,-3300000,17160000,-1000000];await this.render('warning',e,128,160,CONFIG.profiles.thunderstorm.warning,CONFIG.profiles.thunderstorm.titles,signal);await this.render('radar',e,128,160,CONFIG.radar.names,CONFIG.radar.titles,signal);}
+  async verifyRole(role,signal){const e=[15330000,-3300000,17160000,-1000000],spec=role==='warning'?CONFIG.profiles.thunderstorm:CONFIG.radar;
+    const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();
+  }
+  async verify(signal){await this.verifyRole('warning',signal);await this.verifyRole('radar',signal);}
+  async probeFeature(spec,signal){const items=await this.search([spec.title,...(spec.alternatives||[])],'Feature Service',signal);if(items.length!==1)throw new Error(items.length?'Multiple matching items; check the layer title and access.':'No accessible layer item was found.');
+    const base=items[0].url?.replace(/\/$/,'');if(!base)throw new Error('Layer item has no service URL');const url=/\/(FeatureServer|MapServer)\/\d+$/i.test(base)?base:base+'/'+spec.layer;
+    const r=await this.sdk.esriRequest(url+'/query',{query:{where:'1=1',returnCountOnly:true,f:'json'},responseType:'json',timeout:20000,signal});checkAbort(signal);if(!Number.isInteger(r.data?.count)||r.data.count<0)throw new Error('Authenticated layer query failed');
+  }
   async featureCollection(item,layerId,signal){const base=item.url?.replace(/\/$/,'');if(!base)throw new Error('Feature item has no service URL');
     // IdentityManager-aware esriRequest supplies credentials to hosted feature
     // services. Use a query-only request, never copy tokens into configuration.
@@ -51,5 +59,5 @@ export class ArcGISConnection {
   }
   async districts(signal){const items=await this.search([CONFIG.arcgis.districts.title]);if(items.length!==1)throw new Error(items.length?'District layer is ambiguous':'District layer is unavailable');return this.featureCollection(items[0],CONFIG.arcgis.districts.layer,signal);}
   async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{const items=await this.search([spec.title,...(spec.alternatives||[])]);if(items.length!==1)throw new Error(items.length?'Multiple matching camera items; no item selected automatically':'No accessible camera item');return {key:spec.key,label:spec.label,collection:await this.featureCollection(items[0],spec.layer,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
-  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base.destroy();this.layers={};this.portal=null;}
+  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base.destroy();this.layers={};this.choices={};this.serial={};this.portal=null;}
 }
