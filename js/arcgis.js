@@ -3,6 +3,7 @@ import {checkAbort,clean} from './utils.js';
 import {withDeadline} from './connections.js';
 import {registeredWmsConfig,renderRegisteredWms,WmsError} from './wms.js';
 import {CAMERA_ITEM_TYPES,arcgisItemId,distinctFeatureItems,embeddedCameraCollection,featureQueryUrl} from './portal-features.js';
+import {resolveCameraAttachments} from './camera-images.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 function weatherFailure(role,stage,error){
@@ -100,8 +101,9 @@ export class ArcGISConnection {
     if(spec.key&&item.type&&!CAMERA_ITEM_TYPES.includes(item.type))throw new Error('Selected item is not a supported camera layer or web map.');
     this.featureItems.set(key,item);return item;
   }
+  async cameraServiceCollection(item,layerId,signal){const collection=await this.featureCollection(item,layerId,signal);return resolveCameraAttachments({collection,url:item.url,layerId,request:this.sdk.esriRequest,signal});}
   async cameraCollection(spec,signal){const item=await this.featureItem(spec,signal);
-    return ['Feature Collection','Web Map'].includes(item.type)||!item.url?embeddedCameraCollection(item,spec,this.featureCollection.bind(this),signal):this.featureCollection(item,spec.layer,signal);
+    return ['Feature Collection','Web Map'].includes(item.type)||!item.url?embeddedCameraCollection(item,spec,this.cameraServiceCollection.bind(this),signal):this.cameraServiceCollection(item,spec.layer,signal);
   }
   async probeFeature(spec,signal){if(spec.key)return this.cameraCollection(spec,signal);const item=await this.featureItem(spec,signal);
     const url=featureQueryUrl(item.url,spec.layer);

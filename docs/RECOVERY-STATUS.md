@@ -8,6 +8,8 @@ The authenticated adapter uses ArcGIS's JavaScript SDK and organisation portal i
 
 Warning detection is based on coloured WMS pixels. It is an approximation of the rendered warning footprint, not an authoritative warning polygon. Statewide coarse detection can miss extremely small or unusually styled features; final regional detection uses the full output resolution. Reducing detection pixel size does not create finer meteorological observations. The SDK and external data schemas may require adjustment after live account verification.
 
+The 27 October camera revision checked current public Queensland and official BCC metadata directly. The adapter now retains numbered flood-camera image views and resolves BCC feature attachments, matching Council's published map configuration. Photograph retrieval through the user's signed-in deployment remains a separate acceptance check. Flood-area scanning now starts automatically on the Flooding tab, with explicit loading, selection, no-active-area and retry states.
+
 The public outage pipeline is a separate project. Its source is not included. This app requires the recorded current-outage GeoJSON and a fresh matching run manifest; if those are absent or incompatible, the power report is withheld with a separate status note. Live datasets can be unavailable independently of this app.
 
 Validation available for this replacement is documented in `ACCEPTANCE.md`. There is no claim that the original operational application has been restored exactly or that authenticated data has been validated.

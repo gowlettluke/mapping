@@ -7,7 +7,7 @@ export const CONFIG = {
     clientId:"PoEOYlSa1Jm7IaeQ", // Recorded public OAuth ID; redirect registration must be checked.
     items:{warning:"BoM Severe Weather Warning WMS APIM PRD",radar:"BoM Radar WMS APIM PRD"},
     cameras:[
-      {key:"flood",title:"Web Cameras - LIVE",layer:0,label:"TMR flood cameras"},
+      {key:"flood",title:"Web Cameras - LIVE",alternatives:["QLD Flood Cameras"],layer:0,label:"Queensland flood cameras"},
       {key:"bcc",title:"BCC_City_Resilience_cameras_view",alternatives:["BCC City Resilience cameras DataShare","BCC City Resilience cameras"],layer:0,label:"BCC City Resilience cameras"}
     ],
     districts:{title:"District_Disaster_Management_Groups_DDMG_Boundary_Status_Url",layer:0,nameField:"PROP_DD"}

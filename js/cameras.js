@@ -2,15 +2,17 @@ import {CONFIG} from '../config.js';
 import {json,request,imageFromBlob,canvas,clean,verifiedTime,checkAbort,pooled,errorText} from './utils.js';
 import {queryArcgis} from './sources.js';
 import {maskContains} from './raster.js';
+import {safeImageUrl,cameraImageLinks} from './camera-images.js';
 const captureKeys=new Set(['imagecapturedat','imagecapturetime','photocapturedat','photocapturetime','phototakenat','imageexifdatetimeoriginal']);
 export function captureTime(props){for(const [key,value] of Object.entries(props||{}))if(captureKeys.has(key.toLowerCase().replace(/[^a-z0-9]/g,'')))return verifiedTime(value);return null;}
-export function safeUrl(raw){try{const u=new URL(String(raw));return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}}
+export const safeUrl=safeImageUrl;
 export function externalPhotoLink(raw){const url=safeUrl(raw);if(!url)return '';const u=new URL(url);return [...u.searchParams.keys()].some(k=>/token|api.?key|signature|^sig$|^key$|x-amz|credential/i.test(k))?'':url;}
 export function normaliseCameras(payload,source,label){const rows=Array.isArray(payload)?payload:payload.features||payload.webcams||payload.data||[];if(!Array.isArray(rows))throw new Error(label+' returned an unknown camera format');
-  return rows.map((f,index)=>{const p=f.properties||f,aliases=Object.fromEntries(Object.entries(p).map(([k,v])=>[k.toLowerCase().replace(/[^a-z0-9]/g,''),v])),point=f.geometry?.type==='Point'?f.geometry.coordinates:
+  return rows.flatMap((f,index)=>{const p=f.properties||f,aliases=Object.fromEntries(Object.entries(p).map(([k,v])=>[k.toLowerCase().replace(/[^a-z0-9]/g,''),v])),point=f.geometry?.type==='Point'?f.geometry.coordinates:
     [Number(p.longitude??p.lon??p.lng??p.location?.longitude),Number(p.latitude??p.lat??p.location?.latitude)];
-    const url=safeUrl(p.image?.url||aliases.imageurl||aliases.stillimageurl||aliases.cameraurl||aliases.webcamurl||aliases.photourl||p.url||p.URL);
-    return {id:source+':'+(p.camera_id??p.id??p.objectid??f.id??index),source,sourceLabel:label,name:clean(p.Location_Name||p.location_name||p.description||p.name||p.title||aliases.cameraname||aliases.sitename||aliases.locationname||'Camera '+(index+1)),point,url,capturedAt:captureTime(p)};
+    const links=cameraImageLinks(p),baseId=f.id??p.camera_id??p.id??p.objectid??index,baseName=clean(p.Location_Name||p.location_name||p.description||p.name||p.title||aliases.cameraname||aliases.sitename||aliases.locationname||'Camera '+(index+1));
+    return links.map((image,i)=>({id:source+':'+baseId+(links.length>1?':'+image.field:''),source,sourceLabel:label,
+      name:baseName+(p._camera_view?' · '+clean(p._camera_view):links.length>1?' · view '+(i+1):''),point,url:image.url,capturedAt:captureTime(p)}));
   }).filter(c=>c.url&&c.point.length>=2&&c.point.every(Number.isFinite)&&Math.abs(c.point[0])<=180&&Math.abs(c.point[1])<=90);
 }
 export function selectCameras(cameras,masks){const seen=new Set();return cameras.filter(c=>{

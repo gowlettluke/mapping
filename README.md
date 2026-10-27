@@ -26,7 +26,11 @@ A successful portal login alone does not prove the backing WMS can be reached. P
 
 The two flood catchment-name checks use live BoM reference geometry where browser access is available, with verified bundled Queensland boundary data as a fallback. A fallback is explicitly labelled **Bundled BoM catchment reference boundaries**, with its retrieval date. These are static reference shapes for matching catchment names and product IDs; active warnings and watches always come from the authenticated WMS. Refresh the bundled geometry with `python3 scripts/refresh-flood-references.py`, then commit both compressed datasets and their manifest together.
 
-The user's 27 October screenshot confirms successful warning/radar image checks through the organisation print service, connected disaster districts and generated statewide maps. The revised private camera lookups and active-storm output still need a signed-in check. [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) records completed validation and the remaining live checks; the synthetic demo alone does not verify private services.
+Camera discovery recognises the `QLD Flood Cameras` item title as well as its `Web Cameras - LIVE` service name. Separate image views at each location are retained. BCC photographs are resolved from the service's ArcGIS attachment metadata; connection checks fetch that metadata, not the photographs. Capture times are not inferred from feature edit times.
+
+Selecting **Flooding** automatically loads active warning/watch areas once the core layers are ready. A single detected area is selected automatically; multiple areas require a choice. A confirmed absence of active areas permits a statewide map. Failed or cancelled scans require a retry and cannot become a no-warning result.
+
+The user's 27 October screenshot confirms successful warning/radar image checks through the organisation print service, connected disaster districts and generated statewide maps. Current public camera metadata has also been checked against the revised adapters; signed-in camera-image retrieval and active-storm output still need a deployment check. [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) records completed validation and the remaining live checks; the synthetic demo alone does not verify private services.
 
 ## Included behaviour
 
