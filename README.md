@@ -14,7 +14,7 @@ python3 -m http.server 8000
 
 Open <http://localhost:8000/demo.html> to exercise the two JPEG exports, report text and camera PDF with clearly marked **synthetic** fixtures. This separate demonstration works without ArcGIS or live data. Open <http://localhost:8000/> for the actual app. Opening the HTML directly as a `file:` URL does not support its JavaScript modules.
 
-For live operation, enter your ArcGIS organisation prefix and an OAuth application ID whose registered redirect includes the exact page URL shown in the connection panel. Sign in, select the organisation's registered BoM warning and radar WMS items, and verify the feeds. The previously recorded public OAuth ID is supplied as a starting value; its availability and redirect registration need checking. Do not enter tokens, passwords or private API keys in `config.js`.
+For live operation, enter your ArcGIS organisation prefix and sign in. Select the organisation's registered BoM warning and radar WMS items, and verify the feeds. The app uses the recorded public OAuth client ID from `CONFIG.arcgis.clientId` in `config.js` automatically; users do not enter or edit it in the connection form. Its availability and registered redirect URL still need checking by the app administrator. Do not enter tokens, passwords or private API keys in `config.js`.
 
 **Live authenticated warning/radar rendering and organisational camera/district layers have not been verified with your account.** Do the checks in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) before operational use. A successful offline demo does not establish that the private connections work.
 
