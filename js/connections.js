@@ -32,7 +32,7 @@ export async function executeChecks(jobs,{signal,onUpdate=()=>{},timeout=30000}=
   const results=new Map();for(const job of jobs)onUpdate({...job,run:undefined,status:'pending',detail:'Waiting to check...'});
   await pooled(jobs,4,async job=>{
     checkAbort(signal);onUpdate({id:job.id,status:'checking',detail:'Checking connection...'});
-    let result;try{const detail=await withDeadline(job.run,signal,timeout);result={id:job.id,status:'ok',detail:detail||'Connected'};}
+    let result;try{const detail=await withDeadline(job.run,signal,job.timeout||timeout);result={id:job.id,status:'ok',detail:detail||'Connected'};}
     catch(error){if(signal?.aborted)throw error;result={id:job.id,status:'error',detail:errorText(error)};}
     checkAbort(signal);results.set(job.id,result);onUpdate(result);
   });return results;
@@ -44,8 +44,8 @@ export async function checkLayerConnections(connection,{warningId,radarId,signal
   let powerPromise;
   const power=()=>powerPromise??=(async()=>{const [feed,manifest]=await Promise.all([json(src.outages,{signal}),json(src.outageManifest,{signal})]);return powerHealth(feed,manifest);})();
   const jobs=[
-    {id:'warning',run:async s=>{await connection.bind('warning',warningId,s);await connection.verifyRole('warning',s);return 'Registered warning layer rendered';}},
-    {id:'radar',run:async s=>{await connection.bind('radar',radarId,s);await connection.verifyRole('radar',s);return 'Registered radar layer rendered';}},
+    {id:'warning',timeout:115000,run:async s=>{await connection.bind('warning',warningId,s);const route=await connection.verifyRole('warning',s);return 'Registered warning layer rendered'+(route==='print'?' through organisation print service':'');}},
+    {id:'radar',timeout:115000,run:async s=>{await connection.bind('radar',radarId,s);const route=await connection.verifyRole('radar',s);return 'Registered radar layer rendered'+(route==='print'?' through organisation print service':'');}},
     {id:'lgas',run:async s=>{await lgas(s);return 'Statewide LGA coverage verified';}},
     ...['energex','ergon'].map(code=>({id:code,run:async()=>{const healthy=await power();if(!healthy[code])throw new Error('Current outage snapshot could not be verified');return 'Current outage snapshot verified';}})),
     {id:'roads',run:async s=>{collection(await json(src.traffic,{signal:s}),'QLDTraffic');return 'Current events feed connected';}},

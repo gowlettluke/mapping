@@ -5,7 +5,7 @@ All configured URLs are in `config.js`. Service accessibility and schema must be
 | Data | Source / assumption |
 | --- | --- |
 | Warning WMS | Organisation portal item titled `BoM Severe Weather Warning WMS APIM PRD`; thunderstorm `IDZ20006`, severe weather `IDZ20005`, flood warning/watch `IDZ20013` / `IDZ20016`. |
-| Radar WMS | Item titled `BoM Radar WMS APIM PRD`; `IDR00010`. The SDK renders the registered WMS layer. |
+| Radar WMS | Item titled `BoM Radar WMS APIM PRD`; native layer `IDR00010`. Warning and radar retain separate registered definitions even if their underlying gateway is the same. |
 | Storm tracking | Optional `IDZ20007_track` / `IDZ20007`; infrastructure export only. |
 | LGAs | Queensland Administrative Boundaries MapServer layer 1. GeoJSON paging must finish; basic statewide coverage is checked before use. |
 | Queensland locator | Mainland geometry from Geographical Features layer 90, with separate Foundation Data coast layer 55 and state border layer 5. LGA polygons are used for analysis, not the locator silhouette. |
@@ -28,3 +28,11 @@ Relevant primary SDK documentation:
 - <https://github.com/parallax/jsPDF>
 
 No third-party imagery or live observations are bundled as operational data. `demo.html` uses fictional synthetic fixtures and marks its output accordingly.
+
+## Registered WMS rendering
+
+The recovered implementation description supplied on 27 October 2026 confirmed separate warning/radar items and the need to preserve each item's map URL, URL query parameters, custom/global and custom/layer parameters, WMS version, native names and native styles. It also identified an organisation Export Web Map fallback. It did not recover item IDs or complete source. This replacement reads the actual private item definitions at runtime rather than substituting the visible upstream gateway URL or embedding credentials in the repository.
+
+`js/wms.js` builds each render independently from that registered definition. It preserves vendor parameters and replaces only the fields that select the requested image operation, extent, native names/styles and pixel size. Direct image access uses ArcGIS `esriRequest`; if unavailable, the portal-configured print task receives the registered WMS definition via POST. Print output is a transparent PNG containing only the selected WMS layer, without a basemap or page surround. Aspect-ratio expansion is explicitly cropped back to the requested extent so warning pixels remain aligned with LGA analysis. Synchronous and asynchronous Export Web Map tasks are supported. Errors identifying failed layers are rejected even if the service also supplies an output image. No generic sharing proxy is used.
+
+The organisation's print server still needs access to the registered WMS configuration. Adding the fallback does not itself grant that access or prove live operation. Runtime configuration, request URLs and GP messages can contain sensitive parameters; they are not persisted or included in exported maps/reports or user-facing errors.

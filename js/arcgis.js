@@ -1,9 +1,12 @@
 import {CONFIG} from '../config.js';
 import {checkAbort,clean} from './utils.js';
+import {withDeadline} from './connections.js';
+import {registeredWmsConfig,renderRegisteredWms,WmsError} from './wms.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 function weatherFailure(role,stage,error){
   if(error?.name==='AbortError')return error;
+  if(error instanceof WmsError)return new Error(`${role==='warning'?'Warning':'Radar'}: ${error.message}`);
   // SDK errors can contain service URLs, request options and credentials.
   // Display only the phase and an HTTP status, never the original payload.
   const status=Number(error?.details?.httpStatus);
@@ -15,7 +18,7 @@ function sdk(){if(!modulesPromise)modulesPromise=new Promise((resolve,reject)=>{
 }).then(()=>globalThis.$arcgis.import(['@arcgis/core/identity/OAuthInfo.js','@arcgis/core/identity/IdentityManager.js','@arcgis/core/portal/Portal.js','@arcgis/core/portal/PortalItem.js','@arcgis/core/layers/WMSLayer.js','@arcgis/core/geometry/Extent.js','@arcgis/core/request.js'])).catch(e=>{modulesPromise=null;throw e;});return modulesPromise;}
 export function organisationUrl(prefix){const value=clean(prefix).toLowerCase();if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value))throw new Error('Enter only the organisation prefix, such as yourorg');return 'https://'+value+'.maps.arcgis.com';}
 export class ArcGISConnection {
-  constructor(){this.portal=null;this.layers={};this.choices={};this.districtItem=null;this.cameraItems=[];this.serial={};}
+  constructor(){this.portal=null;this.layers={};this.choices={};this.districtItem=null;this.cameraItems=[];}
   async connect(prefix,clientId,{resume=false}={}) {
     const [OAuthInfo,identity,Portal,PortalItem,WMSLayer,Extent,esriRequest]=await sdk();this.sdk={OAuthInfo,identity,Portal,PortalItem,WMSLayer,Extent,esriRequest};
     const url=organisationUrl(prefix);if(!/^[A-Za-z0-9_-]{8,128}$/.test(clientId))throw new Error('Enter a valid public ArcGIS OAuth client ID');
@@ -46,31 +49,37 @@ export class ArcGISConnection {
     }return [...matches.values()];
   }
   async bind(role,id,signal){checkAbort(signal);const item=this.choices[role]?.find(i=>i.id===id);if(!item)throw new Error(this.choices[role]?.length?'Select the correct '+role+' item below, then recheck layers.':'No accessible '+role+' WMS item was found. Check sharing and access.');
-    // Load private metadata through the signed-in portal, then let the SDK use
-    // the item's registered service and credential handling. Do not substitute
-    // a public endpoint or copy a token into a URL/header ourselves.
-    try{if(item.load)await item.load({signal});checkAbort(signal);}catch(error){throw weatherFailure(role,'private item metadata',error);}
+    // Read private item configuration through its authenticated PortalItem.
+    // In particular, item.mapUrl may differ from its visible service URL.
+    let data={};
+    try{await withDeadline(async s=>{if(item.load)await item.load({signal:s});if(item.fetchData)data=await item.fetchData('json',{signal:s})||{};checkAbort(s);},signal,20000);}
+    catch(error){throw weatherFailure(role,'private item metadata',error);}
     const layer=new this.sdk.WMSLayer({portalItem:item,imageFormat:'image/png',imageTransparency:true});
-    try{await layer.load({signal});}catch(error){layer.destroy();throw weatherFailure(role,'service capabilities',error);}
-    if(signal?.aborted){layer.destroy();checkAbort(signal);}this.layers[role]?.base.destroy();
-    this.layers[role]={base:layer,all:[...(layer.allSublayers?.toArray()||layer.sublayers?.toArray()||[])]};
+    let loaded=false,sdkData={};
+    try{
+      // CORS-blocked/stalled capabilities must not prevent the organisation
+      // print fallback from trying the authenticated registered definition.
+      await withDeadline(s=>layer.load({signal:s}),signal,10000);checkAbort(signal);loaded=true;
+      sdkData=layer.toJSON?.()||{url:layer.url,mapUrl:layer.mapUrl,version:layer.version,
+        customParameters:layer.customParameters,customLayerParameters:layer.customLayerParameters,
+        layers:(layer.allSublayers?.toArray()||[]).map(s=>({name:s.name,title:s.title,style:s.style}))};
+    }catch(error){layer.destroy();checkAbort(signal);}
+    let config;try{config=registeredWmsConfig(item,data,sdkData);}catch(error){if(loaded)layer.destroy();throw weatherFailure(role,'registered configuration',error);}
+    if(signal?.aborted){if(loaded)layer.destroy();checkAbort(signal);}this.layers[role]?.base?.destroy();
+    this.layers[role]={base:loaded?layer:null,config,route:null};
   }
   async render(role,extent,width,height,names,titles=[],signal){checkAbort(signal);if(!this.layers[role])throw new Error('Connect and verify the '+role+' layer first');
-    // One mutable SDK WMSLayer per role. Serializing selections prevents an
-    // optional tracking request from changing an in-flight warning GetMap.
-    const previous=this.serial[role]||Promise.resolve();const operation=previous.catch(()=>{}).then(async()=>{
-      checkAbort(signal);const {base,all}=this.layers[role];const selected=all.filter(s=>names.includes(s.name)||titles.some(t=>String(s.title).toLowerCase()===t.toLowerCase()));
-      if(!selected.length)throw new Error('The selected WMS item has none of the required sublayers: '+names.join(', '));
-      const actualNames=new Set(selected.map(s=>s.name));if(names.length>1&&!names.every(n=>actualNames.has(n))&&selected.length<names.length)throw new Error('A required WMS sublayer is unavailable');
-      base.sublayers=selected.map(s=>{const clone=s.clone();clone.visible=true;return clone;});
-      const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,30000);
-      try{return await base.fetchImage(new this.sdk.Extent({xmin:extent[0],ymin:extent[1],xmax:extent[2],ymax:extent[3],spatialReference:{wkid:3857}}),width,height,{signal:controller.signal});}
-      catch(error){throw weatherFailure(role,'map image',error);}
-      finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
-    });this.serial[role]=operation;return operation;
+    // Each request owns its names/styles. Tracking and warning requests no
+    // longer mutate the same SDK sublayer collection while images are pending.
+    const record=this.layers[role];
+    try{return await withDeadline(async s=>{
+      const result=await renderRegisteredWms({request:this.sdk.esriRequest,printTask:this.portal?.helperServices?.printTask?.url,
+        config:record.config,names,titles,extent,width,height,signal:s,preferPrint:record.route==='print'});
+      checkAbort(s);record.route=result.route;return result.image;
+    },signal,80000);}catch(error){throw weatherFailure(role,'map image',error);}
   }
   async verifyRole(role,signal){const e=[15330000,-3300000,17160000,-1000000],spec=role==='warning'?CONFIG.profiles.thunderstorm:CONFIG.radar;
-    const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();
+    const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();return this.layers[role].route;
   }
   async verify(signal){await this.verifyRole('warning',signal);await this.verifyRole('radar',signal);}
   async probeFeature(spec,signal){const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching items; check the layer title and access.':'No accessible layer item was found.');
@@ -87,5 +96,5 @@ export class ArcGISConnection {
   }
   async districts(signal){const items=await this.search([CONFIG.arcgis.districts.title],undefined,signal);if(items.length!==1)throw new Error(items.length?'District layer is ambiguous':'District layer is unavailable');return this.featureCollection(items[0],CONFIG.arcgis.districts.layer,signal);}
   async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{const items=await this.search([spec.title,...(spec.alternatives||[])],undefined,signal);if(items.length!==1)throw new Error(items.length?'Multiple matching camera items; no item selected automatically':'No accessible camera item');return {key:spec.key,label:spec.label,collection:await this.featureCollection(items[0],spec.layer,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
-  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base.destroy();this.layers={};this.choices={};this.serial={};this.portal=null;}
+  disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.portal=null;}
 }
