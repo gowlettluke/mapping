@@ -4,6 +4,8 @@ This is a new reconstruction dated **25 October 2026**, based on the requirement
 
 The complete app is static HTML, CSS and JavaScript. No build step, application server, npm dependencies or private credentials are included. Keep all files together.
 
+The interface follows the shared situation-board styling in [qldpoweroutages](https://github.com/gowlettluke/qldpoweroutages) and [qld_only_isolation](https://github.com/gowlettluke/qld_only_isolation): neutral grey/white surfaces, red accents, compact square panels and controls, and a persistent light/dark theme. Theme colours are defined in `styles.css`; map-export symbology is defined separately in `js/renderer.js`.
+
 ## Try it locally
 
 Extract the ZIP, open a terminal in this folder and run:

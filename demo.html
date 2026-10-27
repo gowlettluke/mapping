@@ -2,7 +2,7 @@
 <html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>DEMO - Queensland Warning Mapping</title><link rel="stylesheet" href="styles.css"></head>
 <body data-mode="demo">
 <div class="shell">
-  <header class="topbar"><div><p class="kicker">QUEENSLAND OPERATIONAL MAPPING</p><h1>Warning Mapping</h1><p>Warning maps, infrastructure impacts and report text.</p></div><div class="account"><span id="account">Not connected</span><button id="signOut" hidden>Sign out</button><button id="theme" type="button">Dark mode</button></div></header>
+  <header class="topbar"><div class="title-block"><h1>Queensland Warning Mapping</h1><p>Warning maps, infrastructure impacts and report text.</p></div><div class="account"><span id="account">Not connected</span><button id="signOut" hidden>Sign out</button><button id="theme" type="button" aria-pressed="false">Dark mode</button></div></header>
   <section class="panel login-gate" id="connectionPanel" aria-labelledby="loginHeading"><div class="panel-body">
     <h2 id="loginHeading">Sign in to Warning Mapping</h2><p>Choose your ArcGIS organisation to continue.</p>
     <form id="loginForm"><label>ArcGIS organisation prefix<input id="orgPrefix" autocomplete="organization" placeholder="your-organisation" pattern="[A-Za-z0-9-]+" required><small>Enter the part before .maps.arcgis.com</small></label><button class="primary" id="signIn" type="submit">Continue to ArcGIS sign-in</button></form>
