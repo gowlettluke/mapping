@@ -1,0 +1,9 @@
+{
+  "name": "queensland-warning-mapping-reconstructed",
+  "version": "2026.10.25",
+  "private": true,
+  "type": "module",
+  "description": "Reconstructed replacement for the unavailable giswatidid/Mapping source repository",
+  "scripts": {"test": "node --test tests/*.test.js", "check": "node scripts/check.mjs", "start": "python3 -m http.server 8000"},
+  "engines": {"node": ">=20"}
+}
