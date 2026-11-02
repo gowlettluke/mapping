@@ -12,7 +12,7 @@ export async function scanFloods(connection,signal,onProgress=()=>{}){
   const boundary=await lgas(signal),extent=projectedBounds(CONFIG.rendering.qld),[w,h]=CONFIG.rendering.detection,output=[];
   for(const [index,key] of ['floodWarnings','floodWatches'].entries()){
     checkAbort(signal);const names=[CONFIG.profiles.flooding.warning[index]],titles=[CONFIG.profiles.flooding.titles[index]],kind=index?'Flood Watch':'Flood Warning';onProgress('Scanning '+kind+' areas...');
-    const detected=await scan(connection,names,titles,extent,boundary,w,h,signal);if(!detected.active)continue;
+    let detected;try{detected=await scan(connection,names,titles,extent,boundary,w,h,signal);}catch(error){checkAbort(signal);throw new Error(kind+' areas could not be loaded. '+error.message);}if(!detected.active)continue;
     let refs={features:[]};try{refs=(await floodReference(key,signal)).collection;}catch{checkAbort(signal);}
     const groups=new Map();components(detected.mask).forEach((component,i)=>{const ref=refs.features.find(f=>contains(component.sample,f.geometry)),p=ref?.properties||{},id=p.product_id||p.PRODUCT_ID||'',title=p.dist_name||p.DIST_NAME||warningLgas(boundary,[component.mask]).map(lgaName).slice(0,2).join(' / '),groupKey=id||'area:'+i;
       if(!groups.has(groupKey))groups.set(groupKey,{id:key+':'+groupKey,title:kind+' - '+(title||'detected area '+(i+1)),kind,names,titles,components:[],identified:Boolean(id),extent:component.extent});
@@ -28,12 +28,12 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
   onProgress('Loading shared infrastructure data and map background...');const [{data:context,notices},background]=await Promise.all([loadPublic(geographicBounds(extent),signal),basemap(extent,width,height,signal)]);checkAbort(signal);
   if(background.failed){notices.push(background.failed+' of '+background.total+' background tiles were unavailable.');if(background.failed===background.total){context.basemapUnavailable=true;const ctx=background.canvas.getContext('2d'),p=transform(extent,width,height);ctx.fillStyle='#f2eee5';for(const f of boundary.features){ctx.beginPath();path(ctx,f.geometry,p);ctx.fill('evenodd');}}}
   onProgress('Rendering the same warning snapshot for both JPEG maps...');const [weather,radar]=await Promise.all([
-    scan(connection,spec.warning,spec.titles,extent,boundary,width,height,signal),connection.render('radar',extent,width,height,CONFIG.radar.names,CONFIG.radar.titles,signal)
+    scan(connection,selection?.names||spec.warning,selection?.titles||spec.titles,extent,boundary,width,height,signal),connection.render('radar',extent,width,height,CONFIG.radar.names,CONFIG.radar.titles,signal)
   ]);
   if(profile!=='flooding'&&weather.active!==active)throw new Error('The warning changed during generation. Generate maps again.');
   if(profile==='flooding'&&!selection&&weather.active)throw new Error('A flood warning/watch is active. Refresh and select its area first.');
   if(active&&profile==='flooding'){
-    const selected=await scan(connection,selection.names,selection.titles,extent,boundary,width,height,signal);
+    const selected=weather;
     const refined=components(selected.mask).filter(c=>selection.components.some(old=>maskContains(old.mask,c.sample)||maskContains(c.mask,old.sample)));
     if(!selected.active||!refined.length)throw new Error('The selected flood area changed. Refresh flood areas and select it again.');
     scopeMasks=refined.map(c=>c.mask);

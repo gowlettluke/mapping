@@ -6,6 +6,7 @@ import {CAMERA_ITEM_TYPES,arcgisItemId,distinctFeatureItems,embeddedCameraCollec
 import {resolveCameraAttachments} from './camera-images.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const configuredWmsNames=new Set([...Object.values(CONFIG.profiles).flatMap(profile=>[...profile.warning,...profile.tracking]),...CONFIG.radar.names]);
 function weatherFailure(role,stage,error){
   if(error?.name==='AbortError')return error;
   if(error instanceof WmsError)return new Error(`${role==='warning'?'Warning':'Radar'}: ${error.message}`);
@@ -63,8 +64,8 @@ export class ArcGISConnection {
       // print fallback from trying the authenticated registered definition.
       await withDeadline(s=>layer.load({signal:s}),signal,10000);checkAbort(signal);loaded=true;
       sdkData=layer.toJSON?.()||{url:layer.url,mapUrl:layer.mapUrl,version:layer.version,
-        customParameters:layer.customParameters,customLayerParameters:layer.customLayerParameters,
-        layers:(layer.allSublayers?.toArray()||[]).map(s=>({name:s.name,title:s.title,style:s.style}))};
+        customParameters:layer.customParameters,customLayerParameters:layer.customLayerParameters};
+      sdkData={...sdkData,layers:[...(sdkData.layers||[]),...(layer.allSublayers?.toArray()||[]).map(s=>({name:s.name,title:s.title,...(s.style!=null?{style:s.style}:{})}))]};
     }catch(error){layer.destroy();checkAbort(signal);}
     let config;try{config=registeredWmsConfig(item,data,sdkData);}catch(error){if(loaded)layer.destroy();throw weatherFailure(role,'registered configuration',error);}
     if(signal?.aborted){if(loaded)layer.destroy();checkAbort(signal);}this.layers[role]?.base?.destroy();
@@ -76,7 +77,7 @@ export class ArcGISConnection {
     const record=this.layers[role];
     try{return await withDeadline(async s=>{
       const result=await renderRegisteredWms({request:this.sdk.esriRequest,printTask:this.portal?.helperServices?.printTask?.url,
-        config:record.config,names,titles,extent,width,height,signal:s,preferPrint:record.route==='print'});
+        config:record.config,names,titles,extent,width,height,signal:s,preferPrint:record.route==='print',allowUnlisted:names.every(name=>configuredWmsNames.has(name))});
       checkAbort(s);record.route=result.route;return result.image;
     },signal,80000);}catch(error){throw weatherFailure(role,'map image',error);}
   }

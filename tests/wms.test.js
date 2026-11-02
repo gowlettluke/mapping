@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {registeredWmsConfig,selectWmsLayers,wmsMapRequest,wmsPrintMap,renderRegisteredWms} from '../js/wms.js';
 import {setCanvasFactory} from '../js/utils.js';
+import {ArcGISConnection} from '../js/arcgis.js';
 
 // No real private item IDs, service URLs or credentials belong in fixtures.
 const item={id:'private-fixture',url:'https://registered.example/capabilities?registration=kept'};
@@ -42,6 +43,31 @@ test('older WMS versions and Web Mercator aliases use SRS without contradictory 
 test('known catalogues reject absent native layers instead of producing a partial warning image',()=>{
   assert.throws(()=>selectWmsLayers(config(),['IDZ20006','missing']),/required native WMS sublayer/);
   assert.throws(()=>registeredWmsConfig(item,{mapUrl:'http://insecure.example/wms'}),/HTTPS/);
+});
+test('configured flood IDs missing from saved item layers reach the service with their own default style',async()=>{
+  const c=registeredWmsConfig(item,{...definition,visibleLayers:['IDZ20006'],customLayerParameters:{STYLES:'storm-only'}}),original=structuredClone(c),calls=[],connection=new ArcGISConnection();
+  connection.layers.warning={config:c,route:null};connection.sdk={esriRequest:async(url,options)=>{calls.push({url,options});return {data:image()};}};
+  for(const name of ['IDZ20013','IDZ20016']){const result=await connection.render('warning',extent,200,100,[name]);assert.equal(result.width,200);const call=calls.at(-1),url=new URL(call.url);assert.equal(url.searchParams.get('layers'),name);assert.equal(url.searchParams.get('styles'),'');assert.equal(url.searchParams.get('route'),'kept');assert.equal(call.options.authMode,'no-prompt');}
+  assert.deepEqual(c,original);const count=calls.length;await assert.rejects(connection.render('warning',extent,200,100,['missing']),/required native WMS sublayer/);assert.equal(calls.length,count);
+});
+test('flood label-only sublayers cannot substitute for the configured warning area geometry',()=>{
+  const c=registeredWmsConfig(item,{...definition,layers:[{name:'IDZ20013_label',title:'Flood Warning | Australia'}]});
+  assert.equal(selectWmsLayers(c,['IDZ20013'],['Flood Warning | Australia'],{allowUnlisted:true})[0].name,'IDZ20013');
+  assert.throws(()=>selectWmsLayers(c,['IDZ20013'],['Flood Warning | Australia']),/required native WMS sublayer/);
+});
+test('configured flood layers absent from saved metadata also use the authenticated print fallback',async()=>{
+  const calls=[],c=registeredWmsConfig(item,{...definition,visibleLayers:['IDZ20006'],customLayerParameters:{STYLES:'storm-only'}}),connection=new ArcGISConnection();
+  connection.layers.warning={config:c,route:null};connection.portal={helperServices:{printTask:{url:task}}};connection.sdk={esriRequest:async(url,options)=>{
+    calls.push({url,options});if(url.startsWith('https://registered.example'))throw new TypeError('CORS blocked');
+    if(url===task)return {data:metadata};if(url===task+'/execute')return {data:{results:[{dataType:'GPDataFile',value:{url:'https://print.example/flood.png'}}]}};return {data:image()};
+  }};
+  await connection.render('warning',extent,200,100,['IDZ20016']);assert.equal(connection.layers.warning.route,'print');
+  const webMap=JSON.parse(calls.find(c=>c.url===task+'/execute').options.query.Web_Map_as_JSON),layer=webMap.operationalLayers[0];assert.deepEqual(layer.visibleLayers,['IDZ20016']);assert.deepEqual(layer.styles,['']);assert.equal(layer.itemId,item.id);assert.equal(new URL(layer.url).searchParams.get('route'),'kept');
+});
+test('a genuine missing flood layer reported by the print service fails instead of returning a blank success',async()=>{
+  let imageRequested=false;const connection=new ArcGISConnection();connection.layers.warning={config:config(),route:'print'};connection.portal={helperServices:{printTask:{url:task}}};
+  connection.sdk={esriRequest:async(url)=>{if(url===task)return {data:metadata};if(url===task+'/execute')return {data:{messages:[{type:'esriJobMessageTypeWarning',description:'Layer IDZ20013 not found'}],results:[{dataType:'GPDataFile',value:{url:'https://print.example/blank.png'}}]}};imageRequested=true;return {data:image()};}};
+  await assert.rejects(connection.render('warning',extent,200,100,['IDZ20013']),/could not render/);assert.equal(imageRequested,false);
 });
 test('print specification is a transparent map-only overlay and crops expanded extents exactly',()=>{
   const c=config(),{webMap,crop}=wmsPrintMap(c,selectWmsLayers(c,['IDR00010']),[0,0,100,100],200,100);
