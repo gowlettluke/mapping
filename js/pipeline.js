@@ -52,5 +52,5 @@ export async function snapshotReport(snapshot,signal){const {context,active,affe
   if(snapshot.demo)names=snapshot.demoMajorNames||[];else if(snapshot.roads.some(r=>r.condition==='closed'))try{names=await majorNames(signal);}catch{majorAvailable=false;}
   checkAbort(signal);const selected=active?affected:lgas.features;
   return buildReport({lgas:selected,allLgas:lgas,outages:context.outages,powerState:powerHealth(context.outages,context.manifest,generated.getTime()),roads:snapshot.roads,trafficAvailable:context.traffic?.type==='FeatureCollection',majorNames:names,majorAvailable,asAt:aest(generated),
-    scope:active?'Scope: current unplanned outages and major-road closures across whole LGAs intersected by the selected warning; impacts may lie outside the warning footprint.':'Scope: Queensland statewide; no active warning was detected.'});
+    scope:active?'Unplanned outages and major road closures in warning LGAs; impacts may extend beyond the warning area.':'Queensland-wide unplanned outages and major road closures; no active warning detected.'});
 }
