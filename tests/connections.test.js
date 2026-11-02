@@ -66,3 +66,8 @@ test('blocked capabilities retain private registered configuration for real imag
   await connection.bind('warning','private');assert.equal(destroyed,1);assert.equal(connection.layers.warning.base,null);assert.equal(connection.layers.warning.route,null);
   assert.equal(connection.layers.warning.config.mapUrl,'https://registered.example/private-map?route=kept');assert.equal(connection.layers.warning.config.customParameters.registration,'kept');
 });
+test('binding retains loaded sublayer hints even when the saved SDK JSON lists only the default warning',async()=>{
+  const connection=new ArcGISConnection();connection.choices.warning=[{id:'private',url:'https://registered.example/wms',fetchData:async()=>({layers:[{name:'IDZ20006'}]})}];
+  connection.sdk={WMSLayer:class{async load(){}destroy(){}toJSON(){return {layers:[{name:'IDZ20006',style:'native-style'}]};}get allSublayers(){return {toArray:()=>[{name:'IDZ20006'},{name:'IDZ20013',title:'Flood Warning | Australia'},{name:'IDZ20016',title:'Flood Watch | Australia'}]};}}};
+  await connection.bind('warning','private');assert.deepEqual(connection.layers.warning.config.layers.map(s=>s.name),['IDZ20006','IDZ20013','IDZ20016']);assert.equal(connection.layers.warning.config.layers[0].style,'native-style');
+});

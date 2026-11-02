@@ -49,12 +49,12 @@ function mapUrl(config){
   for(const [key,value] of [...entries(config.customParameters),...entries(config.customLayerParameters)])setParameter(url,key,value);
   return url;
 }
-export function selectWmsLayers(config,names,titles=[]){
-  // Use native WMS names, with exact title matching only as a fallback. A
-  // missing catalogue (e.g. CORS-blocked capabilities) still permits a real
-  // GetMap verification of the recorded native IDs; it never implies success.
+export function selectWmsLayers(config,names,titles=[],{allowUnlisted=false}={}){
+  // Saved item/SDK sublayers can be only a display subset of the service.
+  // Callers may explicitly allow configured native IDs to be verified by a
+  // real image request. Missing metadata never counts as a successful render.
   const catalogue=config.layers||[];
-  const selected=names.map((name,index)=>catalogue.find(layer=>layer.name===name)||catalogue.find(layer=>titles[index]&&String(layer.title).toLowerCase()===titles[index].toLowerCase())||(!catalogue.length?{name}:null));
+  const selected=names.map((name,index)=>catalogue.find(layer=>layer.name===name)||catalogue.find(layer=>layer.name.toLowerCase()!==(name+'_label').toLowerCase()&&titles[index]&&String(layer.title).toLowerCase()===titles[index].toLowerCase())||(allowUnlisted||!catalogue.length?{name}:null));
   if(!selected.length||selected.some(layer=>!layer?.name)||new Set(selected.map(layer=>layer.name)).size!==selected.length)throw new WmsError('A required native WMS sublayer is unavailable.');
   return selected;
 }
@@ -63,7 +63,7 @@ function selectedStyles(config,layers){
   const queryOrder=list(parameter(url,'layers'));
   const order=list(config.visibleLayers).length?list(config.visibleLayers):queryOrder.length?queryOrder:config.layers.map(layer=>layer.name);
   return layers.map(layer=>{
-    if(specified!=null||styles.length){const index=order.indexOf(layer.name);if(index>=0&&index<styles.length)return String(styles[index]??'');if(specified!=null&&styles.length===1&&layers.length===1)return String(styles[0]);}
+    if(specified!=null||styles.length){const index=order.indexOf(layer.name);if(index>=0&&index<styles.length)return String(styles[index]??'');if(!order.length&&specified!=null&&styles.length===1&&layers.length===1)return String(styles[0]);}
     return typeof layer.style==='string'?layer.style:layer.style?.name||'';
   });
 }
@@ -118,7 +118,7 @@ function readableImage(image,width,height,crop){
   ctx.getImageData(0,0,1,1);return output;
 }
 function printError(data){
-  if(data?.error||data?.messages?.some(message=>message.type==='esriJobMessageTypeError'||/unable to|failed to|cannot (?:create|load|draw)|could not (?:create|load|draw)/i.test(message.description||'')))throw new WmsError('Organisation print service could not render the registered WMS layer.');
+  if(data?.error||data?.messages?.some(message=>message.type==='esriJobMessageTypeError'||/unable to|failed to|cannot (?:create|load|draw)|could not (?:create|load|draw)|LayerNotDefined|StyleNotDefined|(?:sub)?layer\b.*(?:not found|not defined|does not exist|unavailable)/i.test(message.description||'')))throw new WmsError('Organisation print service could not render the registered WMS layer.');
 }
 function waitForPoll(signal){return new Promise((resolve,reject)=>{
   checkAbort(signal);const cancel=()=>{clearTimeout(timer);reject(abortError());},timer=setTimeout(()=>{signal?.removeEventListener('abort',cancel);resolve();},1000);signal?.addEventListener('abort',cancel,{once:true});
@@ -162,8 +162,8 @@ export async function renderWmsPrintImage({request,printTask,config,layers,exten
     throw error;
   }
 }
-export async function renderRegisteredWms({request,printTask,config,names,titles,extent,width,height,signal,preferPrint=false}){
-  checkAbort(signal);validateFrame(extent,width,height);const layers=selectWmsLayers(config,names,titles);
+export async function renderRegisteredWms({request,printTask,config,names,titles,extent,width,height,signal,preferPrint=false,allowUnlisted=false}){
+  checkAbort(signal);validateFrame(extent,width,height);const layers=selectWmsLayers(config,names,titles,{allowUnlisted});
   if(!preferPrint){
     let image;
     try{
