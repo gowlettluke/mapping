@@ -6,7 +6,7 @@ All configured URLs are in `config.js`. Service accessibility and schema must be
 | --- | --- |
 | Warning WMS | Organisation portal item titled `BoM Severe Weather Warning WMS APIM PRD`; thunderstorm `IDZ20006`, severe weather `IDZ20005`, flood warning/watch `IDZ20013` / `IDZ20016`. |
 | Radar WMS | Item titled `BoM Radar WMS APIM PRD`; native layer `IDR00010`. Warning and radar retain separate registered definitions even if their underlying gateway is the same. |
-| Storm tracking | Optional `IDZ20007_track` / `IDZ20007`; infrastructure export only. |
+| Storm tracking | Optional `IDZ20007_track` / `IDZ20007`; Warning + Radar export only, drawn above the radar. |
 | LGAs | Queensland Administrative Boundaries MapServer layer 1. GeoJSON paging must finish; basic statewide coverage is checked before use. |
 | Queensland locator | Mainland geometry from Geographical Features layer 90, with separate Foundation Data coast layer 55 and state border layer 5. LGA polygons are used for analysis, not the locator silhouette. |
 | Outages | Separate `gowlettluke/qldpoweroutages` current-outage GeoJSON and run manifest. Canonical fields include `provider_code`, `outage_id`, `outage_type`, `affected_customers`, `affected_customers_known`, `snapshot_utc`. Requires fresh matching metadata, record counts and provider success. |
