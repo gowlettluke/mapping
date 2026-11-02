@@ -47,21 +47,22 @@ export function buildReport({lgas,allLgas,outages,powerState,roads=[],trafficAva
     if(!names.length&&!outage.geometries.some(bounds)&&selected.has(outage.sourceLga))names=[outage.sourceLga];
     const inside=names.filter(n=>selected.has(n));if(!inside.length){if(!names.length)omitted++;continue;}
     outage.crosses=inside.length!==names.length;sharedOutside ||= outage.crosses;
-    const label=inside.join(' / ')+(outage.crosses?' (shared)':inside.length>1?' (combined)':'');
-    if(!groups[outage.code].has(label))groups[outage.code].set(label,[]);groups[outage.code].get(label).push(outage);
+    const label=inside.join(' / ')+(inside.length>1?' (combined)':''),key=JSON.stringify(inside);
+    if(!groups[outage.code].has(key))groups[outage.code].set(key,{label,shared:false,items:[]});const group=groups[outage.code].get(key);group.shared ||= outage.crosses;group.items.push(outage);
   }
   for(const code of ['energex','ergon']){const name=code==='energex'?'Energex':'Ergon';if(!powerState[code]){notes.push(name+' outage data could not be verified as current; its section is omitted.');continue;}const g=groups[code];if(!g.size)continue;
-    const items=[...g.values()].flat(),within=items.filter(x=>!x.crosses);
-    const summary=within.length?`Total: ${countText(within)}.`:'';
-    sections.push({heading:'Power outages - '+name,summary,rows:[...g].sort(([a],[b])=>sort(a,b)).map(([label,items])=>({label,detail:countText(items)})),link:LINKS[code],linkLabel:name+' Outage Finder'});
+    const items=[...g.values()].flatMap(group=>group.items);
+    const summary=`Total: ${countText(items)}${items.some(x=>x.crosses)?'*':''}.`;
+    sections.push({heading:'Power outages - '+name,summary,rows:[...g.values()].sort((a,b)=>sort(a.label,b.label)).map(group=>({label:group.label,detail:countText(group.items)+(group.shared?'*':'')})),link:LINKS[code],linkLabel:name+' Outage Finder'});
   }
   const major=new Set(majorNames.map(roadKey)),roadGroups=new Map(),roadEvents=new Map();
   for(const r of trafficAvailable&&majorAvailable?roads:[]){if(r.condition!=='closed'||!major.has(roadKey(r.name)))continue;const id=r.id??JSON.stringify([r.geometry,r.name,r.location,r.locality]);if(roadEvents.has(id))roadEvents.get(id).geometries.push(r.geometry);else roadEvents.set(id,{...r,geometries:[r.geometry]});}
   for(const r of roadEvents.values()){const names=[...new Set(r.geometries.flatMap(g=>membership(g,true)))];const location=closureLocation(r),detail=r.name+' - closed'+(location?' '+location:'');for(const name of names){if(!roadGroups.has(name))roadGroups.set(name,new Set());roadGroups.get(name).add(detail);}}
   if(!trafficAvailable)notes.push('QLDTraffic was unavailable; the roads section is omitted.');else if(!majorAvailable)notes.push('Major-road classification was unavailable; the roads section is omitted.');else if(roadGroups.size)sections.push({heading:'Major road closures',rows:[...roadGroups].sort(([a],[b])=>sort(a,b)).map(([label,items])=>({label,detail:[...items].sort(sort).join('; ')})),link:LINKS.roads,linkLabel:'QLDTraffic'});
   if(omitted)notes.push(omitted+' outage record(s) could not be assigned to an LGA and were omitted.');
-  const text=['As at '+asAt+'.',scope];if(sharedOutside)text.push('Shared counts include other LGAs and are excluded from totals.');
+  const text=['As at '+asAt+'.',scope];
   for(const s of sections)text.push('',s.heading,...(s.summary?[s.summary]:[]),...s.rows.map(r=>'- '+r.label+': '+r.detail),'Source: '+s.linkLabel+' - '+s.link);
+  if(sharedOutside)text.push('','* Outage counts may include customers outside the LGAs in the warning area.');
   if(!sections.length&&!notes.length)text.push('','No unplanned outages or major road closures reported.');
   return {text:sections.length||!notes.length?text.join('\n'):'',sections,notes};
 }
