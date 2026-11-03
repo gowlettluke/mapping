@@ -10,7 +10,8 @@ export const CONFIG = {
       {key:"flood",title:"Web Cameras - LIVE",alternatives:["QLD Flood Cameras"],layer:0,label:"Queensland flood cameras"},
       {key:"bcc",title:"BCC_City_Resilience_cameras_view",alternatives:["BCC City Resilience cameras DataShare","BCC City Resilience cameras"],layer:0,label:"BCC City Resilience cameras"}
     ],
-    districts:{title:"District_Disaster_Management_Groups_DDMG_Boundary_Status_Url",layer:0,nameField:"PROP_DD"}
+    districts:{title:"District_Disaster_Management_Groups_DDMG_Boundary_Status_Url",layer:0,nameField:"PROP_DD"},
+    gauges:{key:"gauges",title:"BOM Flood Gauges 15min QFD DataShare",alternatives:["BoM Flood Gauges 15min QFD DataShare"],layer:0,label:"BoM river gauges",itemTypes:["Feature Service","Map Service"]}
   },
   publicSources:{
     lga:"https://spatial-gis.information.qld.gov.au/arcgis/rest/services/Boundaries/AdministrativeBoundaries/MapServer/1",
@@ -29,6 +30,7 @@ export const CONFIG = {
     ,floodWatches:"https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/0"
   },
   rendering:{qld:[137.7,-29.3,154.2,-9],detection:[720,950],width:1500,height:1120,minimumRegionalKm:180,padding:.4},
+  gauges:{observationAgeMinutes:120,feedAgeMinutes:45},
   profiles:{
     thunderstorm:{label:"Severe Thunderstorm",warning:["IDZ20006"],titles:["Severe Thunderstorm Warning | Australia"],tracking:["IDZ20007_track","IDZ20007"]},
     severeWeather:{label:"Severe Weather",warning:["IDZ20005"],titles:["Severe Weather Warning | Australia"],tracking:[]},

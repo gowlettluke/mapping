@@ -87,6 +87,10 @@ textarea{resize:vertical;min-height:220px;max-height:65vh;line-height:1.5}
 .camera-item strong,.camera-item small{display:block}
 .camera-item strong{overflow-wrap:anywhere}
 .camera-item a{font-size:11px}
+.report-options{margin-bottom:12px}
+.gauge-item{border-left:4px solid var(--line)}
+.gauge-item p{margin:6px 0}
+.gauge-item .gauge-age{color:var(--amber);margin:5px 0}
 progress{width:100%;height:15px;margin:8px 0}
 footer{color:var(--muted);font-size:11px;line-height:1.5;border-top:1px solid var(--line);padding:9px 1px 0}
 footer p{margin:3px 0}
@@ -116,3 +120,4 @@ footer p{margin:3px 0}
 @media(min-width:1500px){body{font-size:14px}}
 @media(max-width:1000px){.topbar{grid-template-columns:1fr;gap:10px}.account{justify-content:flex-start}.maps{grid-template-columns:1fr}.feed-checks,.camera-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.shell{width:calc(100% - 14px);padding-top:7px}.topbar{position:static;padding:10px}.topbar h1{font-size:25px}.topbar p{font-size:12px}.panel-heading{align-items:flex-start;flex-direction:column}.panel-body{padding:10px}.panel-heading .action-row{width:100%}.panel-heading .action-row button{flex:1}.form-grid,.areas,.camera-list,.feed-checks{grid-template-columns:1fr}.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:5px}.tab{padding:7px 4px;font-size:11px}.map-caption{align-items:flex-start;flex-direction:column}.action-row{align-items:flex-start}.login-gate{margin:24px auto}.login-gate .panel-body{padding:16px}.login-gate h2{font-size:21px}}
+

@@ -84,3 +84,43 @@ An unreadable, blank or unavailable source legend produces an explicit notice
 in the export and interface. The app never guesses severity meanings from pixel
 colours or substitutes the old yellow warning swatch. Optional name/legend
 failures do not turn an active flood area into a no-warning result.
+
+## River gauges and graph images
+
+The optional gauge source is the signed-in organisation's **BOM Flood Gauges
+15min QFD DataShare** item, the point layer shown in the user's 4 November 2026
+screenshots. The item title and layer number are configured; private service
+URLs and credentials are not committed. Discovery uses the same portal session
+and item-choice control as other optional features. A failed gauge check never
+blocks the two existing map products or camera-only exports.
+
+Service metadata, coded domains, field aliases and saved popup labels resolve
+station names/IDs, heights, source classifications, trends and timestamps.
+Numeric heights do not determine severity. Missing classifications/timestamps
+stay unknown; timezone-free timestamp strings are not silently treated as AEST.
+Gauge inclusion uses the selected snapshot's flood masks rather than entire
+intersecting LGAs. Duplicate station records retain the latest observation;
+distinct stations at the same location remain separate.
+
+Graph links are read from graph/image fields, popup image media or HTML image
+templates. Field substitutions preserve source station IDs, including leading
+zeroes. Legacy HTTP image links use HTTPS on the same host. No BoM image paths,
+thresholds, history or graphs are fabricated from current readings. Popup
+Arcade expressions and native interactive charts are not evaluated into graphs;
+those need a source image URL before they can be embedded. See Esri's
+[popupInfo](https://developers.arcgis.com/web-map-specification/objects/popupInfo/)
+and [image value](https://developers.arcgis.com/web-map-specification/objects/value/)
+specifications.
+
+Only graph export retrieves image bodies. ArcGIS-hosted images use the current
+SDK session; public image requests do not receive ArcGIS credentials. Missing,
+blocked or unreadable graph images keep their station readings and an explicit
+unavailable placeholder. A graph's retrieval time is distinct from both the
+station observation time and the layer update time; retrieving a graph does not
+establish that its plotted observations are current.
+
+Age notices currently mark observations older than 120 minutes and layer updates
+older than 45 minutes; both values are in `CONFIG.gauges`. These notices retain
+the data and its reported classification. They are not the camera photograph
+one-hour exclusion rule and do not declare the observation invalid. Gauges-only
+PDFs remain available with no cameras and with missing graph images.
