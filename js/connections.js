@@ -3,6 +3,7 @@ import {json,isCollection,checkAbort,abortError,pooled,errorText} from './utils.
 import {lgas,locator,majorNames} from './sources.js';
 import {normaliseCameras} from './cameras.js';
 import {powerHealth} from './report.js';
+import {providerCouncils} from './council-counts.js';
 import {floodReference} from './flood-references.js';
 
 export const FEEDS=[
@@ -43,12 +44,12 @@ function collection(d,label){if(!isCollection(d))throw new Error(label+' did not
 export async function checkLayerConnections(connection,{warningId,radarId,signal,onUpdate}={}){
   const src=CONFIG.publicSources;
   let powerPromise;
-  const power=()=>powerPromise??=(async()=>{const [feed,manifest]=await Promise.all([json(src.outages,{signal}),json(src.outageManifest,{signal})]);return powerHealth(feed,manifest);})();
+  const power=()=>powerPromise??=(async()=>{const [feed,manifest]=await Promise.all([json(src.outages,{signal}),json(src.outageManifest,{signal})]);return {geometry:powerHealth(feed,manifest),councils:providerCouncils(manifest)};})();
   const jobs=[
     {id:'warning',timeout:115000,run:async s=>{await connection.bind('warning',warningId,s);const route=await connection.verifyRole('warning',s);return 'Registered warning layer rendered'+(route==='print'?' through organisation print service':'');}},
     {id:'radar',timeout:115000,run:async s=>{await connection.bind('radar',radarId,s);const route=await connection.verifyRole('radar',s);return 'Registered radar layer rendered'+(route==='print'?' through organisation print service':'');}},
     {id:'lgas',run:async s=>{await lgas(s);return 'Statewide LGA coverage verified';}},
-    ...['energex','ergon'].map(code=>({id:code,run:async()=>{const healthy=await power();if(!healthy[code])throw new Error('Current outage snapshot could not be verified');return 'Current outage snapshot verified';}})),
+    ...['energex','ergon'].map(code=>({id:code,run:async()=>{const healthy=await power();if(!healthy.geometry[code])throw new Error('Current outage map snapshot could not be verified');if(!healthy.councils[code])throw new Error('Current council outage counts could not be verified');return 'Current outage map and council counts verified';}})),
     {id:'roads',run:async s=>{collection(await json(src.traffic,{signal:s}),'QLDTraffic');return 'Current events feed connected';}},
     {id:'majorRoads',run:async s=>{await majorNames(s);return 'Highway and motorway names available';}},
     {id:'locator',run:async s=>{await locator(s);return 'Coastal state shape available';}},
@@ -62,3 +63,4 @@ export async function checkLayerConnections(connection,{warningId,radarId,signal
   ];
   return executeChecks(jobs,{signal,onUpdate});
 }
+

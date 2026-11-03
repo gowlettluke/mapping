@@ -22,7 +22,7 @@ Before using a new deployment with live data, verify:
 
 1. The initial page shows only the organisation-prefix sign-in form, with no app controls or OAuth client-ID field. OAuth redirects to ArcGIS and back to the correct HTTPS page. The app then opens and automatically checks connections. Both registered WMS items render through the signed-in session; unique items require no manual selection. Sign out during checks and confirm the prefix page returns without late results reopening the app. An expired session must also return to the prefix form. Missing optional layers must remain visible in the app without disabling successfully verified core map layers.
 2. Compare current BoM warning extents with the map, including warnings near the coast and Queensland border. Both exports must show the same warning outline and surrounding regional context; LGA lines must stay inside the frame. The locator silhouette must follow the state coast/border.
-3. Cross-check outage totals against the same feed snapshot. Include only unplanned outages affecting warning-intersected LGAs. Check shared and unknown totals; missing/stale provider data must produce a status note rather than a no-outage claim.
+3. Cross-check report figures against each provider's council text view/API at its recorded update time. Include only unplanned council counts for warning-intersected LGAs, once per council; no combined rows. Missing, stale, incomplete or unmatched council data must produce a status note rather than a no-outage claim. Outage map polygons/labels still show whole-outage source geometry and counts.
 4. Compare the road text against QLDTraffic: major full closures, the LGA, road name and concise closure location. Lane reductions and 4WD-only access must not enter copied road text. Paste into the intended report editor and verify the three source links remain clickable.
 5. Check separate flood warning/watch selections, especially adjacent or disconnected areas. Treat “detected area” labels as raster matches, not verified official product identities. Confirm a changing warning requires regeneration rather than reusing stale selection scope.
 6. Check TMR and BCC cameras against the actual footprint. Ensure separate views at one location survive deduplication. Generate a PDF with a missing image, a known stale photo and an unverified capture time. Verify numbering, photo links and back-links after exclusions.
@@ -69,3 +69,26 @@ A separate synthetic service run using native canvas exercised both warning/watc
 Source checks and all 80 tests pass. Coverage includes the inclusive 100-customer default, all five label settings, safe handling of invalid saved settings, visibility of unlabelled small outages, distinct unknown-count styling, and complete report totals. The label threshold is passed through both live and demo snapshot generation, saved as a local display preference, and recorded in the infrastructure legend.
 
 A native-canvas crowded fixture showed 57 number labels before this change, 13 at 100+ customers and 9 at 250+. Both map products were rendered and inspected. Pixel comparisons confirm the radar export is unchanged, and report text is identical across label thresholds. The synthetic flood scan/export/tab-switch integration check also passes. These are synthetic/export checks; the browser controls have not been exercised in this workspace because Chromium is unavailable.
+
+## Provider council report revision
+
+All 85 application checks and nine upstream collector tests pass. Reports use
+provider-published council counts, with one row per selected LGA and no combined
+rows or shared-count footnote. Coverage includes the 1 / 1,007 / 1 Ergon council
+allocation, selected-versus-statewide sums, council aliases, verified zero
+outages, independent provider failures, stale/future timestamps, mismatched
+snapshots, malformed counts, duplicate councils and totals that do not reconcile.
+
+Live retrieval from both official providers succeeded on 3 November 2026. All
+returned names matched the current government LGA catalogue. The collected state
+totals reconciled with the report, and a selected-LGA report retained only the
+provider counts for those LGAs. These were dated source observations, not fixed
+expected customer totals. Offline demo reports pass for all three profiles with
+and without an active warning. Synthetic flood generation/export and crowded
+outage rendering also pass; the report is independent of the label threshold.
+Chromium is unavailable in this workspace, so the browser UI was not rechecked.
+
+Deployment order: merge the upstream `qldpoweroutages` collector, verify a poll
+has published successful `provider_council_counts` entries, then deploy Mapping.
+Older or failed upstream entries produce an omitted-section status note.
+

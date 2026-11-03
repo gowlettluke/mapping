@@ -55,10 +55,11 @@ test('label thresholds are inclusive, configurable and recorded in the infrastru
   const all=composeProducts({...input,outageLabelMinimum:'0'});assert.ok(all.infrastructure.texts.includes('54'));
   for(const invalid of ['',-1,150,NaN])assert.equal(composeProducts({...input,outageLabelMinimum:invalid}).infrastructure.texts.includes('54'),false);
 });
-test('unlabelled small outages remain drawn, unknown counts remain distinct and report totals retain them',()=>{
+test('unlabelled small outages remain drawn, unknown counts stay distinct and report counts are independent of map labels',()=>{
   const input=fixture(),outage=(id,count,extra={})=>({type:'Feature',geometry:{type:'Point',coordinates:[152,-26]},properties:{outage_id:id,provider_code:'au.qld.energex',outage_type:'unplanned',affected_customers:count,...extra}});
   input.outages=collection([outage('small-a',54),outage('small-b',99),outage('unknown',null),outage('unreported',999,{affected_customers_known:false}),outage('planned',888,{outage_type:'planned'})]);
   const result=composeProducts({...input,outageLabelMinimum:500});assert.equal(result.infrastructure.arcs.length,4);assert.equal(result.infrastructure.arcs[0].fill,result.infrastructure.arcs[1].fill);assert.equal(result.infrastructure.arcs[2].fill,result.infrastructure.arcs[3].fill);assert.notEqual(result.infrastructure.arcs[0].fill,result.infrastructure.arcs[2].fill);assert.equal(result.infrastructure.texts.includes('54'),false);
   const lga={type:'Feature',properties:{lga:'Test Regional'},geometry:{type:'Polygon',coordinates:[[[150,-28],[154,-28],[154,-24],[150,-24],[150,-28]]]}};
-  const report=buildReport({lgas:[lga],allLgas:collection([lga]),outages:input.outages,powerState:{energex:true,ergon:true},trafficAvailable:true,asAt:'Test snapshot',scope:'Selected LGAs'});assert.match(report.text,/153 customers, plus 2 outages with unreported customer counts/);assert.doesNotMatch(report.text,/888|999/);
+  const powerCounts={energex:{rows:[{label:'Test Regional',count:153}]},ergon:{rows:[]}};
+  const report=buildReport({lgas:[lga],allLgas:collection([lga]),powerCounts,trafficAvailable:true,asAt:'Test snapshot',scope:'Selected LGAs'});assert.match(report.text,/153 customers/);assert.doesNotMatch(report.text,/888|999/);
 });
