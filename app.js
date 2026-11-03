@@ -60,14 +60,16 @@ async function loadGauges(snapshot,run,signal){
   if(!snapshot.active){state.gaugeStatus='ready';$('gaugeStatus').textContent='No active flood area: gauge reports are disabled.';updateButtons();return;}
   state.gaugeStatus='loading';$('gaugeStatus').textContent='Checking river gauges inside the selected flood area...';updateButtons();
   try{const gauges=demo?(await import('./js/demo.js')).demoGauges(snapshot):await discoverGauges(connection,snapshot.scopeMasks,signal);checkAbort(signal);if(run!==state.version)return;
-    const map=gaugeMap(snapshot,gauges),blob=await canvasBlob(map),diagrams=[],diagramProducts=[];
-    for(const page of gaugeDiagramLayout(gauges).pages){checkAbort(signal);const image=drawGaugeDiagram(snapshot,page,{signal}),flowBlob=await canvasBlob(image);checkAbort(signal);if(run!==state.version)return;
-      diagrams.push({data:image.toDataURL('image/jpeg',.94),width:image.width,height:image.height,nodes:page.nodes.map(({label,x,y,width,height})=>({label,x,y,width,height}))});diagramProducts.push(flowBlob);
-    }
+    const map=gaugeMap(snapshot,gauges),blob=await canvasBlob(map),diagrams=[],diagramProducts=[];let flowNotice='';
+    try{const layout=gaugeDiagramLayout(gauges);flowNotice=layout.unconnected.length?layout.unconnected.length+' gauges have no verified selected connection; their readings remain in the index.':'';
+      for(const page of layout.pages){checkAbort(signal);const image=drawGaugeDiagram(snapshot,page,{signal}),flowBlob=await canvasBlob(image);checkAbort(signal);if(run!==state.version)return;
+        diagrams.push({...page,data:image.toDataURL('image/jpeg',.94),width:image.width,height:image.height});diagramProducts.push(flowBlob);
+      }
+    }catch(error){checkAbort(signal);diagrams.length=0;diagramProducts.length=0;flowNotice='The river diagram could not be laid out. Gauge readings remain available in the index.';}
     checkAbort(signal);if(run!==state.version)return;state.gauges=gauges;state.gaugeMap=map;state.flowDiagrams=diagrams;state.gaugeStatus='ready';
     const base=(demo?'DEMO-':'')+'flooding-'+stamp(snapshot.generated);addProduct(blob,'Flood Warning / Watch + River Gauges',base+'-gauges.jpg');
     diagramProducts.forEach((product,index)=>addProduct(product,'River gauge flow — '+(index+1)+' of '+diagrams.length,base+'-river-flow-'+(index+1)+'.jpg'));$('mapCount').textContent=(3+diagrams.length)+' JPEG exports';
-    $('gaugeStatus').textContent=gauges.length+' river gauges inside the selected flood area. '+gaugeFlowSummary(gauges)+' Graphs load on request.';
+    $('gaugeStatus').textContent=gauges.length+' river gauges inside the selected flood area. '+gaugeFlowSummary(gauges)+' '+flowNotice+' Graphs load on request.';
     for(const gauge of gauges){const card=document.createElement('article');card.className='camera-item gauge-item';card.style.borderLeftColor=GAUGE_COLOURS[gauge.category];const title=document.createElement('strong');title.textContent=gauge.label+' · '+gauge.name+(gauge.stationId?' ['+gauge.stationId+']':'');const reading=document.createElement('p');reading.textContent=gaugeReading(gauge);const observed=document.createElement('small');observed.textContent='Observed: '+gaugeTime(gauge.observedAt);const updated=document.createElement('small');updated.textContent='Feed updated: '+gaugeTime(gauge.updatedAt);card.append(title,reading,observed,updated);
       const flow=document.createElement('small');flow.textContent=gaugeFlowLabel(gauge);card.append(flow);
       const timing=gaugeTiming(gauge,snapshot.generated.getTime());if(timing.length){const warning=document.createElement('small');warning.className='gauge-age';warning.textContent=timing.join(' · ');card.append(warning);}

@@ -3,6 +3,7 @@ import {externalPhotoLink} from './cameras.js';
 import {photoLayout} from './pdf.js';
 import {gaugeReading,gaugeTiming} from './gauges.js';
 import {gaugeFlowLabel,gaugeFlowSummary} from './gauge-flow.js';
+import {gaugeDiagramPdf} from './gauge-diagram.js';
 
 const ascii=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\u2010-\u2015]/g,'-').replace(/[^\x20-\x7e\n]/g,' ');
 const gaugeRows=20,gaugeTextColours={major:[177,32,47],moderate:[148,111,0],minor:[26,114,69]};
@@ -31,7 +32,11 @@ export function floodReportPdf({jsPDF,snapshot,gauges=[],graphs=[],photos=[],gau
     for(const text of [snapshot.scopeLabel,gauges.length+' gauges in the selected flood area.','G numbers link to graph pages.',gaugeFlowSummary(gauges),...notes]){const lines=doc.splitTextToSize(ascii(text),53);doc.text(lines,233,y);y+=lines.length*4+7;}
     for(let i=0;i<gauges.length;i++){const marker=gauges[i].marker;if(marker)doc.link(box.x+marker.x/gaugeOverview.width*box.width-3,box.y+marker.y/gaugeOverview.height*box.height-3,6,6,{pageNumber:plan.gaugeGraphs+Math.floor(i/plan.graphsPerPage)});}
     for(const [index,diagram]of flowDiagrams.entries()){
-      newPage('River Gauge Flow - '+(index+1)+' of '+flowDiagrams.length);const box=imageFit(diagram,9,26,279,166);
+      newPage('River Flow - '+(diagram.system||((index+1)+' of '+flowDiagrams.length)));
+      if(diagram.layoutVersion===2){const targets=gaugeDiagramPdf(doc,snapshot,diagram);for(const node of targets){const gaugeIndex=gauges.findIndex(gauge=>gauge.label===node.label);if(gaugeIndex<0)continue;
+          const target=node.context&&node.homeSheet&&node.homeSheet!==index+1?plan.gaugeFlow+node.homeSheet-1:plan.gaugeGraphs+Math.floor(gaugeIndex/plan.graphsPerPage);doc.link(node.x,node.y,node.width,node.height,{pageNumber:target});
+        }continue;}
+      const box=imageFit(diagram,9,26,279,166);
       for(const node of diagram.nodes||[]){const gaugeIndex=gauges.findIndex(gauge=>gauge.label===node.label);if(gaugeIndex<0)continue;
         doc.link(box.x+node.x/diagram.width*box.width,box.y+node.y/diagram.height*box.height,node.width/diagram.width*box.width,node.height/diagram.height*box.height,{pageNumber:plan.gaugeGraphs+Math.floor(gaugeIndex/plan.graphsPerPage)});
       }

@@ -46,6 +46,10 @@ test('defensive ordering also preserves stations if supplied a cyclic fixture',(
 test('source Stream and Basin fields are retained without treating CatchmentID as flow direction',()=>{
   const rows=normaliseGauges({collection:{type:'FeatureCollection',features:[{type:'Feature',properties:{StationNum:538001,Name:'Retreat',Stream:'Barcoo River',Basin:'Cooper Creek',CatchmentID:999},geometry:{type:'Point',coordinates:point}}]}});assert.equal(rows[0].river,'Barcoo River');assert.equal(rows[0].basin,'Cooper Creek');assert.equal(rows[0].flowOrder,undefined);
 });
+test('missing river names use the source watercourse label without inventing a flow connection',()=>{
+  const stations=reference([record(1,[2],{river:'undefined'}),record(2,[],{river:'Example River'})]),output=orderGaugesByFlow([gauge(1,'Location (Tributary Creek)'),gauge(2,'Example River at Lower Bridge')],stations);
+  const tributary=output.find(gauge=>gauge.stationId==='1');assert.equal(tributary.river,'Tributary Creek');assert.ok(tributary.flowDownstream.length===1);assert.ok(output.every(gauge=>!gauge.flowGroup.includes('undefined')));
+});
 const source={gaugeCollection:async()=>({collection:{type:'FeatureCollection',features:[{type:'Feature',properties:{StationNum:1,Name:'Selected station'},geometry:{type:'Point',coordinates:point}}]}})},mask={extent:projectedBounds([144,-26,146,-24]),width:1,height:1,visible:new Uint8Array([1])};
 test('reference failure affects ordering only and cancellation cannot produce a stale gauge list',async()=>{
   const result=await discoverGauges(source,[mask],null,{flowReference:async()=>{throw new Error('Reference failed');}});assert.equal(result.length,1);assert.equal(result[0].flowOrder,'unconfirmed');
