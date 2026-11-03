@@ -5,13 +5,42 @@ import {ArcGISConnection} from '../js/arcgis.js';
 import {floodPdfPlan,floodReportPdf} from '../js/flood-pdf.js';
 import {setCanvasFactory} from '../js/utils.js';
 import {projectedBounds,pixelPoint} from '../js/geometry.js';
+import {CONFIG} from '../config.js';
 
 const now=Date.parse('2026-11-03T14:00:00Z'),feature=(properties={},point=[153,-27])=>({type:'Feature',id:1,properties,geometry:{type:'Point',coordinates:point}}),collection=features=>({type:'FeatureCollection',features});
 const sample={station_id:'0538001',station_name:'Barcoo River at Retreat',river_height:3.15,flood_classification:'Minor',trend:'Steady',observation_time:now-30*60000,last_update:now-5*60000};
 const normalise=(properties=sample,extra={})=>normaliseGauges({collection:collection([feature(properties)]),...extra})[0];
+test('the confirmed gauge item loads automatically by ID without a title search',async()=>{
+  const connection=new ArcGISConnection(),seen=[];connection.portal={url:'https://organisation.maps.arcgis.com'};
+  connection.search=async()=>{throw new Error('The exact gauge item must not depend on title search');};
+  connection.sdk={PortalItem:class{constructor(options){seen.push(options);this.id=options.id;this.type='Feature Service';}async load(){this.loaded=true;}}};
+  const item=await connection.featureItem(CONFIG.arcgis.gauges);assert.equal(item.id,'1d05b9f286334868a2dd70079d963810');assert.equal(item.loaded,true);assert.equal(seen[0].portal,connection.portal);assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)),item);assert.equal(seen.length,1);
+});
+test('manual gauge source choices override the configured default and replace its cached item',async()=>{
+  const connection=new ArcGISConnection();connection.sdk={PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){}}};
+  assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+  const other='abcdef0123456789abcdef0123456789';connection.setFeatureSelection(CONFIG.arcgis.gauges,other);assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,other);
+});
+test('an unavailable configured gauge item retains the manual-source control and sign-out restores the default',async()=>{
+  const connection=new ArcGISConnection();let fail=true;connection.sdk={identity:{destroyCredentials(){}},PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){if(fail)throw new Error('Not shared with this account');}}};
+  await assert.rejects(connection.featureItem(CONFIG.arcgis.gauges));assert.ok('gauges' in connection.featureChoices);connection.featureSelections.set('gauges','abcdef0123456789abcdef0123456789');connection.disconnect();fail=false;
+  assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+});
 test('gauge records preserve station IDs, source classification and separate observation/update times',()=>{
   const gauge=normalise();assert.equal(gauge.stationId,'0538001');assert.equal(gauge.height,3.15);assert.equal(gauge.category,'minor');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);assert.equal(gauge.graphUrl,'');
   const zero=normalise({...sample,river_height:0});assert.equal(zero.height,0);
+});
+test('QFD table fields supply station ID, classification, tendency, observation and FME update times',()=>{
+  const gauge=normalise({StationNum:'058234',Name:'Rocky Creek at Rocky Creek',Height:-.05,Class:'No Classification',Tendency:'Steady','Observation Time':now-30*60000,FMETimestamp:now-5*60000,URLChart:'https://graphs.example/actual-chart.png',URLPage:'https://graphs.example/station-page.shtml',ClassRank:-999});
+  assert.equal(gauge.stationId,'058234');assert.equal(gauge.name,'Rocky Creek at Rocky Creek');assert.equal(gauge.height,-.05);assert.equal(gauge.reportedCategory,'No Classification');assert.equal(gauge.category,'unknown');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);
+  assert.equal(gauge.graphUrl,'https://graphs.example/actual-chart.png');assert.equal(gauge.sourceUrl,'https://graphs.example/station-page.shtml');
+  for(const classification of ['Minor','Moderate','Major'])assert.equal(normalise({StationNum:538001,Name:'Source station',Height:3.15,Class:classification}).category,classification.toLowerCase());
+});
+test('QFD URLChart takes precedence over a popup page link and URLPage is never guessed to be an image',()=>{
+  const popupInfo={mediaInfos:[{type:'image',value:{sourceURL:'{URLPage}'}}]},gauge=normalise({StationNum:538001,Name:'Source station',URLChart:'https://graphs.example/chart.png',URLPage:'https://graphs.example/page.shtml'}, {popupInfo});
+  assert.equal(gauge.graphUrl,'https://graphs.example/chart.png');assert.equal(gauge.sourceUrl,'https://graphs.example/page.shtml');
+  assert.equal(gaugeGraphLink({StationNum:538001,URLPage:'https://graphs.example/page.shtml'}),'');
+  assert.equal(normalise({StationNum:538001,Name:'Source station',Height:8,ClassRank:3}).category,'unknown');
 });
 test('field aliases and coded domains supply source labels without inferring severity from height',()=>{
   const gauge=normalise({s:'538001',n:'Example station',h:'3.15 m',c:2,o:now,u:now},{fields:[{name:'s',alias:'Station ID'},{name:'n',alias:'Station name'},{name:'h',alias:'River height (m)'},{name:'c',alias:'Flood classification',domain:{codedValues:[{code:2,name:'Moderate'}]}},{name:'o',alias:'Observation time'},{name:'u',alias:'Last update'}]});
@@ -72,4 +101,10 @@ test('gauge-only PDF retains readings when graphs are missing and never embeds c
   const texts=[],links=[];class PDF{addPage(){}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){texts.push(String(value));}link(x,y,w,h,target){links.push(target);}splitTextToSize(value){return [value];}addImage(){}}
   const gauge={...normalise(),label:'G1',sourceUrl:'https://graphs.example/source?token=SECRET'},snapshot={generated:new Date(now),scopeLabel:'Synthetic flood area'};
   const result=floodReportPdf({jsPDF:PDF,snapshot,gauges:[gauge],graphs:[],gaugeOverview:{data:'synthetic',width:100,height:100}});assert.ok(result);assert.ok(texts.some(text=>text.includes('3.15')));assert.ok(texts.some(text=>text.includes('Graph unavailable')));assert.equal(links.some(link=>link.url),false);assert.ok(links.every(link=>link.pageNumber>=1&&link.pageNumber<=3));
+});
+test('real BoM chart proportions get full-width pages and correctly linked individual graph targets',()=>{
+  const pages=[],links=[],images=[];let page=0;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){pages.push({page,text:String(value)});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(data,type,x,y,width,height){images.push({page,width,height});}}
+  const gauges=[{...normalise(),label:'G1'},{...normalise({...sample,station_id:'different',station_name:'Another station'}),label:'G2'}],graphs=gauges.map(gauge=>({gauge,graph:{data:'synthetic image',width:800,height:400,retrievedAt:new Date(now)}}));
+  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,graphs,gaugeOverview:{data:'synthetic overview',width:100,height:100}});assert.equal(page+1,4);assert.equal(images.filter(image=>image.page>=2).length,2);assert.ok(images.filter(image=>image.page>=2).every(image=>image.width>260&&image.height>130));assert.ok(links.some(link=>link.page===1&&link.pageNumber===4));assert.ok(links.every(link=>!link.pageNumber||link.pageNumber<=4));
+  assert.equal(floodPdfPlan(2,0,{graphsPerPage:1}).gaugeGraphPages,2);assert.throws(()=>floodPdfPlan(2,0,{graphsPerPage:3}),/Unsupported/);
 });

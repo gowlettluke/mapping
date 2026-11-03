@@ -90,8 +90,10 @@ failures do not turn an active flood area into a no-warning result.
 The optional gauge source is the signed-in organisation's **BOM Flood Gauges
 15min QFD DataShare** item, the point layer shown in the user's 4 November 2026
 screenshots. The item title and layer number are configured; private service
-URLs and credentials are not committed. Discovery uses the same portal session
-and item-choice control as other optional features. A failed gauge check never
+URLs and credentials are not committed. The user-confirmed item ID
+`1d05b9f286334868a2dd70079d963810` is loaded directly through the current portal
+session. Manual item choices override this default for the session, and remain
+available if the configured item cannot load. A failed gauge check never
 blocks the two existing map products or camera-only exports.
 
 Service metadata, coded domains, field aliases and saved popup labels resolve
@@ -101,6 +103,24 @@ stay unknown; timezone-free timestamp strings are not silently treated as AEST.
 Gauge inclusion uses the selected snapshot's flood masks rather than entire
 intersecting LGAs. Duplicate station records retain the latest observation;
 distinct stations at the same location remain separate.
+
+The user's attribute-table screenshots confirm these QFD fields (field aliases
+are also supported):
+
+| QFD field | App value |
+| --- | --- |
+| `StationNum` | Station identifier |
+| `Name` | Gauge name |
+| `Height` | Reported height, including valid negative readings |
+| `Class` | Reported flood classification |
+| `Tendency` | Reported trend |
+| `Observation Time` | Observation timestamp |
+| `FMETimestamp` | Layer processing/update timestamp |
+| `URLChart` | Chart image URL, preferred over a popup's page link |
+| `URLPage` | Station source page for report hyperlinks |
+
+`No Classification` remains unknown; it does not mean no flooding. `ClassRank`
+is not used to infer classification, including its observed `-999` value.
 
 Graph links are read from graph/image fields, popup image media or HTML image
 templates. Field substitutions preserve source station IDs, including leading
@@ -113,11 +133,24 @@ and [image value](https://developers.arcgis.com/web-map-specification/objects/va
 specifications.
 
 Only graph export retrieves image bodies. ArcGIS-hosted images use the current
-SDK session; public image requests do not receive ArcGIS credentials. Missing,
-blocked or unreadable graph images keep their station readings and an explicit
-unavailable placeholder. A graph's retrieval time is distinct from both the
+SDK session; public image requests do not receive ArcGIS credentials. If a
+public BoM PNG cannot be read because of a browser network/cross-origin error,
+`js/graph-export.js` can render that image through the current portal's configured
+Export Web Map task. The fallback accepts only HTTPS `bom.gov.au` / `www.bom.gov.au`
+`/fwo/PRODUCT/PRODUCT.STATION.png` links without credentials, query strings or
+fragments. It uses the supplied URL, not a guessed station path. Display-only
+image loading reads the source dimensions; the print payload contains only the
+public image and an anonymous point, with no station attributes or private
+service URLs. Native aspect ratio is retained and blank print output is rejected.
+Explicit readable HTTP refusals do not trigger this fallback. There is no
+hard-coded public print service or arbitrary proxy.
+
+Missing, blocked or unreadable graph images keep their station readings and an
+explicit unavailable placeholder. A graph's retrieval time is distinct from both the
 station observation time and the layer update time; retrieving a graph does not
-establish that its plotted observations are current.
+establish that its plotted observations are current. Standard 2:1 BoM charts use
+one PDF page each; charts at least 2.8 times as wide as they are high can use
+two per page. Map and station-index links follow the chosen page layout.
 
 Age notices currently mark observations older than 120 minutes and layer updates
 older than 45 minutes; both values are in `CONFIG.gauges`. These notices retain

@@ -146,6 +146,10 @@ function waitForPoll(signal){return new Promise((resolve,reject)=>{
 });}
 function taskPath(base,suffix){const url=new URL(base);url.pathname=url.pathname.replace(/\/$/,'')+suffix;return url.href;}
 export async function renderWmsPrintImage({request,printTask,config,layers,extent,width,height,signal}){
+  const {webMap,crop}=wmsPrintMap(config,layers,extent,width,height);
+  return renderWebMapPrintImage({request,printTask,webMap,crop,width,height,signal});
+}
+export async function renderWebMapPrintImage({request,printTask,webMap,crop=null,width,height,signal}){
   if(!printTask)throw new WmsError('Browser WMS rendering failed and no print service is configured for this ArcGIS organisation.');
   const task=httpsUrl(printTask);task.pathname=task.pathname.replace(/\/$/,'');
   const taskUrl=task.href,options={responseType:'json',authMode:'no-prompt',timeout:20000,signal};
@@ -154,7 +158,7 @@ export async function renderWmsPrintImage({request,printTask,config,layers,exten
   const formats=metadata.parameters.find(p=>p.name==='Format')?.choiceList||[];
   const format=formats.find(f=>String(f).toUpperCase()==='PNG32')||formats.find(f=>String(f).toUpperCase()==='PNG')||(!formats.length?'PNG32':null);
   if(!format)throw new WmsError('Organisation print service does not support PNG map images.');
-  const {webMap,crop}=wmsPrintMap(config,layers,extent,width,height),query={f:'json',Web_Map_as_JSON:JSON.stringify(webMap),Format:format,Layout_Template:'MAP_ONLY'};
+  const query={f:'json',Web_Map_as_JSON:JSON.stringify(webMap),Format:format,Layout_Template:'MAP_ONLY'};
   let result,jobUrl;
   try{
     if(metadata.executionType==='esriExecutionTypeAsynchronous'){

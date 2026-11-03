@@ -197,3 +197,49 @@ flood type. Image fields and popup image templates are supported; Arcade-built
 or native interactive charts require an exposed image source. Unavailable graph
 images must retain their station metadata instead of pretending a graph loaded.
 
+## Confirmed gauge item default — 4 November 2026
+
+The user confirmed the layer connected after entering the item ID visible in
+their registered-service URL. That ID is now the default for authenticated gauge
+loading; name-based discovery is no longer required. All 109 tests and source
+checks pass, including direct ID selection on the current portal, manual source
+override, cache reuse, a failed default retaining the source control, and
+sign-out restoring the configured default.
+
+The subsequent QFD attribute-table screenshots supplied the exact source fields:
+`StationNum`, `Class`, `FMETimestamp`, `URLChart` and `URLPage`. Those fields now
+populate station IDs, source classifications, processing times, graph images
+and source-page links directly. All 111 tests pass. Added source-shape coverage
+retains negative readings and leading-zero station IDs, separates observation
+and processing timestamps, keeps `No Classification` unknown, ignores
+`ClassRank`, and prefers `URLChart` when popup media points at `URLPage`.
+The actual-app synthetic export checks also use this QFD field layout.
+
+## Supplied BoM graph export — 4 November 2026
+
+The user supplied `https://www.bom.gov.au/fwo/IDQ65398/IDQ65398.036169.png`.
+Normal browser navigation loaded the actual 800 by 400 PNG. A direct request
+from the validation environment returned HTTP 403. The standard ArcGIS Export
+Web Map service successfully rendered the public PNG at its native dimensions;
+the downloaded output was pixel-identical to the source (zero differing
+channels). Its image response allowed the mapping site's origin.
+
+Production now uses the signed-in portal's configured print task only after a
+browser network/cross-origin error for a narrowly validated public BoM PNG URL.
+Explicit readable HTTP refusals and private or unrelated image URLs do not use
+this fallback. The production Web Map payload matched the successful live print
+payload. A replay through the production retrieval helper embedded that actual
+chart in a three-page PDF, with no invented readings or classification. The
+full-page graph was rendered and inspected, including its axes, thresholds,
+source copyright, timestamps and source hyperlink. Internal PDF destinations
+and image bounds were valid.
+
+All 120 tests and source/asset checks pass. Added coverage includes URL
+validation, native chart dimensions, print payload and response handling,
+browser-error fallback, unavailable/blank output, cancellation and adaptive
+one- or two-graph pages with correct navigation. The existing registered-WMS
+flood integration and QFD-shaped actual-app export checks also pass. The
+organisation's private print helper and gauge feed still require a signed-in
+deployment check; the public service test verifies the standard export route,
+not the user's private permissions.
+
