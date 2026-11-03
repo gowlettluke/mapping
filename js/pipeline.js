@@ -3,7 +3,8 @@ import {projectedBounds,geographicBounds,fitExtent,contains,lgaName,path,transfo
 import {warningCanvas,analyseCanvas,components,maskContains,rasterIntersects} from './raster.js';
 import {lgas,loadPublic,majorNames} from './sources.js';
 import {basemap,composeProducts,exportProducts} from './renderer.js';
-import {normaliseRoads,powerHealth,buildReport} from './report.js';
+import {normaliseRoads,buildReport} from './report.js';
+import {providerCouncils} from './council-counts.js';
 import {aest,checkAbort} from './utils.js';
 import {floodReference} from './flood-references.js';
 export function warningLgas(collection,masks){return collection.features.filter(f=>masks.some(m=>rasterIntersects(m,f.geometry)));}
@@ -51,6 +52,6 @@ export async function snapshotReport(snapshot,signal){const {context,active,affe
   let names=[],majorAvailable=true;
   if(snapshot.demo)names=snapshot.demoMajorNames||[];else if(snapshot.roads.some(r=>r.condition==='closed'))try{names=await majorNames(signal);}catch{majorAvailable=false;}
   checkAbort(signal);const selected=active?affected:lgas.features;
-  return buildReport({lgas:selected,allLgas:lgas,outages:context.outages,powerState:powerHealth(context.outages,context.manifest,generated.getTime()),roads:snapshot.roads,trafficAvailable:context.traffic?.type==='FeatureCollection',majorNames:names,majorAvailable,asAt:aest(generated),areaLabel:active?'the LGAs affected by this warning':'Queensland',
+  return buildReport({lgas:selected,allLgas:lgas,powerCounts:providerCouncils(context.manifest,generated.getTime()),roads:snapshot.roads,trafficAvailable:context.traffic?.type==='FeatureCollection',majorNames:names,majorAvailable,asAt:aest(generated),areaLabel:active?'the LGAs affected by this warning':'Queensland',
     scope:active?'Unplanned outages and major road closures in warning LGAs; impacts may extend beyond the warning area.':'Queensland-wide unplanned outages and major road closures; no active warning detected.'});
 }
