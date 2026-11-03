@@ -9,6 +9,7 @@ import {aest,checkAbort} from './utils.js';
 import {floodReference} from './flood-references.js';
 import {nativeFloodLabels,catchmentFloodLabels,mapReservations} from './flood-display.js';
 import {withDeadline} from './connections.js';
+import {partitionFloodAreas,intersectFloodMask,clipFloodImage} from './flood-scope.js';
 export function warningLgas(collection,masks){return collection.features.filter(f=>masks.some(m=>rasterIntersects(m,f.geometry)));}
 async function scan(connection,names,titles,extent,boundary,width,height,signal){const im=await connection.render('warning',extent,width,height,names,titles,signal),c=warningCanvas(im,width,height,extent,boundary);im.close?.();return {...analyseCanvas(c,extent),canvas:c};}
 export async function scanFloods(connection,signal,onProgress=()=>{}){
@@ -17,10 +18,7 @@ export async function scanFloods(connection,signal,onProgress=()=>{}){
     checkAbort(signal);const names=[CONFIG.profiles.flooding.warning[index]],titles=[CONFIG.profiles.flooding.titles[index]],kind=index?'Flood Watch':'Flood Warning';onProgress('Scanning '+kind+' areas...');
     let detected;try{detected=await scan(connection,names,titles,extent,boundary,w,h,signal);}catch(error){checkAbort(signal);throw new Error(kind+' areas could not be loaded. '+error.message);}if(!detected.active)continue;
     let refs={features:[]};try{refs=(await floodReference(key,signal)).collection;}catch{checkAbort(signal);}
-    const groups=new Map();components(detected.mask).forEach((component,i)=>{const ref=refs.features.find(f=>contains(component.sample,f.geometry)),p=ref?.properties||{},id=p.product_id||p.PRODUCT_ID||'',title=p.dist_name||p.DIST_NAME||warningLgas(boundary,[component.mask]).map(lgaName).slice(0,2).join(' / '),groupKey=id||'area:'+i;
-      if(!groups.has(groupKey))groups.set(groupKey,{id:key+':'+groupKey,title:kind+' - '+(title||'detected area '+(i+1)),kind,names,titles,components:[],identified:Boolean(id),extent:component.extent});
-      const group=groups.get(groupKey);group.components.push(component);group.extent=[Math.min(group.extent[0],component.extent[0]),Math.min(group.extent[1],component.extent[1]),Math.max(group.extent[2],component.extent[2]),Math.max(group.extent[3],component.extent[3])];
-    });output.push(...groups.values());
+    output.push(...partitionFloodAreas(detected.mask,refs,{key,kind,names,titles,signal}));
   }return output;
 }
 export async function generateSnapshot({connection,profile='thunderstorm',selection=null,tracking=false,outageLabelMinimum,signal,onProgress=()=>{}}){
@@ -37,20 +35,22 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
   if(profile==='flooding'&&!floodSelection&&weather.active)throw new Error('A flood warning/watch is active. Refresh and select its area first.');
   if(active&&profile==='flooding'){
     const selected=weather;
-    const refined=components(selected.mask).filter(c=>floodSelection.components.some(old=>maskContains(old.mask,c.sample)||maskContains(c.mask,old.sample)));
+    const scoped=floodSelection.scopeGeometries?.length?intersectFloodMask(selected.mask,floodSelection.scopeGeometries):null;
+    const refined=scoped?(scoped.active?[scoped]:[]):components(selected.mask).filter(c=>floodSelection.components.some(old=>maskContains(old.mask,c.sample)||maskContains(c.mask,old.sample)));
     if(!selected.active||!refined.length)throw new Error('The selected flood area changed. Refresh flood areas and select it again.');
     scopeMasks=refined.map(c=>c.mask);
+    if(scoped){weather.mask=scoped.mask;weather.canvas=clipFloodImage(weather.canvas,extent,floodSelection.scopeGeometries);}
   }
   if(active&&profile!=='flooding')scopeMasks=[weather.mask];if(!active)scopeMasks=[];
   let floodDisplay=null;
   if(active&&profile==='flooding'){
     onProgress('Adding flood area names and the source legend...');const index=floodSelection.names[0]===spec.warning[1]?1:0,kind=index?'Flood Watch':'Flood Warning';
     const optional=promise=>promise.catch(()=>{checkAbort(signal);return null;});
-    const names=optional(withDeadline(async s=>{const image=await connection.render('warning',extent,width,height,[spec.labels[index]],[],s);try{return nativeFloodLabels(warningCanvas(image,width,height,extent,boundary));}finally{image?.close?.();}},signal,20000));
+    const names=optional(withDeadline(async s=>{const image=await connection.render('warning',extent,width,height,[spec.labels[index]],[],s);try{const labels=warningCanvas(image,width,height,extent,boundary);return nativeFloodLabels(floodSelection.scopeGeometries?.length?clipFloodImage(labels,extent,floodSelection.scopeGeometries):labels);}finally{image?.close?.();}},signal,20000));
     const sourceLegend=optional(Promise.resolve().then(()=>connection.legend('warning',spec.warning[index],signal)));
     let [labels,legend]=await Promise.all([names,sourceLegend]);checkAbort(signal);
     if(!labels){let refs;try{refs=(await floodReference(index?'floodWatches':'floodWarnings',signal)).collection;}catch{checkAbort(signal);}
-      labels=catchmentFloodLabels(weather.mask,refs,{reserved:mapReservations(width,height,context.locator)});
+      labels=catchmentFloodLabels(weather.mask,floodSelection.referenceFeatures?.length?{features:floodSelection.referenceFeatures}:refs,{reserved:mapReservations(width,height,context.locator)});
       if(!labels.boxes.length)notices.push('Flood area names could not be loaded.');
     }
     if(!legend)notices.push('The source flood legend could not be loaded.');

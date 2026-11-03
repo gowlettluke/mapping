@@ -31,7 +31,7 @@ function valuesFor(properties,fields){
   }return values;
 }
 function pick(values,role){for(const name of names[role]){const value=values.get(name);if(value!==undefined&&value!==null&&clean(value)!=='')return value;}return null;}
-export function gaugeCategory(value){const text=key(value||'');if(/belowminor|noflood|notinflood|normal/.test(text))return 'below';if(/major/.test(text))return 'major';if(/moderate/.test(text))return 'moderate';if(/minor/.test(text))return 'minor';return 'unknown';}
+export function gaugeCategory(value){const text=key(value||'');if(/belowminor|belowfloodlevel|noflood|notinflood|normal/.test(text))return 'below';if(/major/.test(text))return 'major';if(/moderate/.test(text))return 'moderate';if(/minor/.test(text))return 'minor';return 'unknown';}
 function heightValue(value){if(value===null||value===undefined||clean(value)==='')return null;const text=clean(value);if(!/^[+-]?\d+(?:\.\d+)?\s*(?:m|metres?|meters?)?$/i.test(text))return null;const height=Number(text.replace(/\s*(?:m|metres?|meters?)$/i,''));return Number.isFinite(height)&&![-9999,-999,-99.99].includes(height)?height:null;}
 function expand(template,properties){
   if(typeof template!=='string')return '';const values=new Map(Object.entries(properties).map(([name,value])=>[key(name),value]));let missing=false;

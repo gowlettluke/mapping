@@ -4,7 +4,8 @@ const wordKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const stationKey=value=>/^\d{1,8}$/.test(String(value||''))&&Number(value)>0?String(Number(value)):null;
 const byName=(a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id);
 const validPoint=point=>Array.isArray(point)&&point.length===2&&point.every(Number.isFinite)&&Math.abs(point[0])<=180&&Math.abs(point[1])<=90;
-const sourceRiver=gauge=>gauge.river||/^(.+?\b(?:river|creek|brook|channel))\s+(?:at|@)\s+/i.exec(gauge.name)?.[1]||'';
+const riverValue=value=>/^(?:undefined|null|none|nan|n\/a|unknown)$/i.test(String(value||'').trim())?'':String(value||'').trim();
+const sourceRiver=gauge=>riverValue(gauge.river)||/^(.+?\b(?:river|creek|brook|channel))\s+(?:at|@)\s+/i.exec(gauge.name)?.[1]||/\(([^()]+\b(?:river|creek|brook|channel))\)\s*$/i.exec(gauge.name)?.[1]||'';
 function distance(a,b){const x=(a[0]-b[0])*111195*Math.cos((a[1]+b[1])/2*Math.PI/180),y=(a[1]-b[1])*111195;return Math.hypot(x,y);}
 let cachedReference;
 
@@ -50,7 +51,7 @@ export function orderGaugesByFlow(gauges,reference=null){
   const lookup=new Map((reference?.stations||[]).map(station=>[stationKey(station.id),station])),matched=new Map(),buckets=new Map(),unknown=[];
   for(const gauge of gauges){const station=lookup.get(stationKey(gauge.stationId));
     if(!station||!validPoint(gauge.point)||distance(gauge.point,station.point)>1000){unknown.push(gauge);continue;}
-    matched.set(gauge,station);const group=wordKey(station.basin)+'|'+wordKey(station.river);if(!buckets.has(group))buckets.set(group,[]);buckets.get(group).push(gauge);
+    const namedStation={...station,river:riverValue(station.river)||sourceRiver(gauge)||'Unnamed tributary'};matched.set(gauge,namedStation);const group=wordKey(station.basin)+'|'+wordKey(namedStation.river);if(!buckets.has(group))buckets.set(group,[]);buckets.get(group).push(gauge);
   }
   const riverBasins=new Map();for(const station of matched.values()){const river=wordKey(station.river);if(!riverBasins.has(river))riverBasins.set(river,new Set());riverBasins.get(river).add(wordKey(station.basin));}
   const output=[];for(const [key,rows]of [...buckets].sort(([a],[b])=>a.localeCompare(b))){

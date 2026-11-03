@@ -65,7 +65,7 @@ test('field aliases and coded domains supply source labels without inferring sev
   assert.equal(gauge.stationId,'538001');assert.equal(gauge.name,'Example station');assert.equal(gauge.category,'moderate');assert.equal(gauge.height,3.15);assert.equal(+gauge.observedAt,now);
   for(const value of [null,-9999,'N/A','Not Available']){const unknown=normalise({...sample,river_height:value,flood_classification:null});assert.equal(unknown.height,null);assert.equal(unknown.category,'unknown');}
   assert.equal(normalise({...sample,river_height:50,flood_classification:null}).category,'unknown');
-  for(const value of ['Below minor','No flooding','Not in flood'])assert.equal(gaugeCategory(value),'below');
+  for(const value of ['Below minor','Below Flood Level','No flooding','Not in flood'])assert.equal(gaugeCategory(value),'below');
 });
 test('direct, media and HTML graph templates resolve source fields without guessed graph paths or Arcade execution',()=>{
   assert.equal(gaugeGraphLink({Graph_URL:'https://graphs.example/actual.png'}),'https://graphs.example/actual.png');
