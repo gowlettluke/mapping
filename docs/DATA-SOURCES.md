@@ -20,6 +20,8 @@ Outage reports concern all unplanned outages affecting an LGA intersected by the
 
 Map footers include generation time and source credits. They omit missing observation/issue times. Camera PDFs distinguish verified capture timestamps from retrieval time and retain provider-hosted unavailable-camera images when successfully retrieved.
 
+Infrastructure outage styling uses fixed customer-count bands: 0–99, 100–499, 500–999 and 1,000+, with neutral grey for unknown counts. This heat-style shading follows the supplied outage areas/points; it does not interpolate new affected areas or infer household locations. Number labels default to 100 customers and can be changed to all, 100, 250, 500 or 1,000 using the Outage labels control before generating maps. This is a display threshold, not an operational significance classification or a report filter. Full eligible outage counts continue into the report independently of the label setting.
+
 ## Camera schemas checked — 27 October 2026
 
 The [QLD Flood Cameras item](https://www.arcgis.com/home/item.html?id=586b27c10999490eb4314fecfe322612) exposes the `Web Cameras - LIVE` service. Fields `Image_Url` through `Image_Url9` can contain separate views, and the first field may be empty. The adapter retains each distinct valid image URL. The source covers council cameras and is labelled **Queensland flood cameras**, rather than attributing every camera to TMR.
