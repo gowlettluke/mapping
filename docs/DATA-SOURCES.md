@@ -172,3 +172,68 @@ import map for the configuration, connection and PDF modules. This refreshes
 those browser module URLs together; update that tag in both pages when making
 another release of these modules. The source check validates their local assets,
 including import-map targets and query-string versioned paths.
+
+## Gauge ordering along rivers
+
+`data/gauge-flow.json` is a static reference built from the public BoM
+[National Flood Gauge Network station catalogue](https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/5)
+and [Geofabric Surface Hydrology Network V3.3](https://services-ap1.arcgis.com/ypkPEy1AmwPKGNNv/arcgis/rest/services/Geofabric_Surface_Hydrology_Network/FeatureServer),
+published openly by Geoscience Australia's Digital Atlas. The original BoM
+Geofabric service is also recorded in the reference provenance. Attribution:
+© Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric via Digital
+Atlas of Australia, Geoscience Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+This reference establishes network relationships, not flood travel times or
+real-time flow direction during tidal/overbank conditions.
+
+The builder cross-references BoM station numbers to AWRC state IDs and
+Geofabric gauging stations. Numeric AWRC aliases can differ in leading zeroes
+and an absent suffix; conflicting non-empty suffixes are rejected. A unique
+nearby network match is still required. Catalogue-to-
+network positions must be within 1,500 m. Flagged source matches and ambiguous
+alternatives are rejected. Other stations can match an explicitly named river
+segment within 120 m only when no competing channel lies within a 60 m distance
+margin. Consecutive segments meeting at the gauge are treated as one channel.
+Multipart or indeterminate-direction segments do not establish ordering.
+
+Flow relationships follow `NextDownID` and the explicit alternate downstream
+links in the Geofabric flow-split table. They do not sort by latitude, station
+number, water height, catchment area or total upstream stream length. Linear
+position on one segment respects its `FlowDir`; colocated/nearby stations within
+50 m do not acquire an asserted relative order. Cyclic paths are excluded.
+The build retains compact station-to-station relationships, not the national
+stream geometry downloaded to derive them.
+
+At runtime the selected live gauge must match a reference BoM station ID
+(leading zeroes preserved for display) and lie within 1,000 m of its catalogue
+location. River and basin grouping separates tributaries and duplicate river
+names. Each displayed reach is a directed chain; gauges on incomparable branches
+are not placed in a single implied flow sequence. All G numbers are assigned
+after ordering and retained across the map, cards, index and four-up graph pages.
+Source `Stream` and `Basin` fields are retained for unmatched gauges; numeric
+`CatchmentID` is not a flow-direction field.
+
+Unknown IDs, moved gauges, isolated incomparable reaches and missing/corrupt
+reference data are labelled **Order unconfirmed**. Their readings, classifications
+and graphs remain available. The source station list still uses the selected
+flood mask; the reference never adds gauges from outside the selected area.
+Reference loading is cancellable, starts only after a selected gauge list is
+available and is cached in memory after validation. Its URL shares the flow
+module's release tag so a new release refreshes the data and sorting together.
+
+Refresh with `python3 scripts/refresh-gauge-flow.py`. Optional `--cache-dir` and
+`--output` arguments support reproducible rebuilds; query pages are checkpointed
+and restricted endpoints fail without requesting or bypassing credentials.
+Where complete older V3.3 downloads are reused, their HydroID topology is checked
+against the public Digital Atlas copy before combining sources. Commit the
+resulting JSON with the application. Its `retrievedUtc` is a reference retrieval
+time, separate from all gauge observation, feed-update and graph-retrieval times.
+
+`--offline` rebuilds from complete cached station, named-stream and flow-split
+downloads plus the cached connector reaches. It makes no network requests and
+publishes only directed station paths explicitly present in those files.
+Unresolved downstream continuations are counted in the JSON; they never create
+an inferred connection. The shipped 4 November 2026 snapshot contains 1,172
+matched stations from a 1,945-station public catalogue, with one cyclic match
+excluded and one unresolved continuation. These are reference counts, not a
+claim about coverage of the user's private observation feed. Live gauges without
+a confident ID/location/path comparison remain marked **Order unconfirmed**.

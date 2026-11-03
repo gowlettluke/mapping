@@ -276,3 +276,41 @@ reports, source/image failures, cancellation and storm/weather regressions.
 The signed-in source still needs the user's deployment check; these tests do
 not establish their private service permissions.
 
+## River/tributary gauge ordering — 4 November 2026
+
+Gauge selection still uses the chosen flood mask, but numbering now follows
+river/basin groups and directed upstream-to-downstream chains. Tributaries and
+incomparable reaches stay separate. Unmatched IDs, moved locations, ambiguous
+branches and unavailable references remain visible as **Order unconfirmed**.
+The same ordered objects feed the gauge map, cards, 20-row table and four-panel
+graph pages; the table and graph headers identify each river/tributary.
+
+The bundled public reference contains 1,172 matched stations from 1,945 catalogue
+locations in Queensland and the configured border extent. It combines BoM
+station/AWRC identifiers with Geofabric V3.3, openly published by Digital Atlas
+of Australia (Geoscience Australia). Cached BoM stream topology was compared with
+the Digital Atlas copy before combining sources. Conflicting AWRC suffixes,
+flagged source matches, ambiguous nearby channels and one cyclic match were
+excluded. Further connector downloads were blocked by the execution environment;
+the offline build publishes only explicit known directed station paths, records
+one unresolved continuation and never invents a connection across that gap.
+These are public-reference counts, not a measured match rate for the private
+QFD observation feed. No private station data or live readings enter the bundle.
+
+All 137 tests and syntax/asset checks pass. New checks cover river/tributary and
+basin grouping, reverse alphabetical/numeric station order, forked reaches,
+leading-zero IDs, moved/unknown locations, invalid/cyclic reference data,
+source Stream/Basin retention, failure recovery, caching and cancellation.
+The actual bundled reference confirms Coolagh (036169) upstream of Retreat
+(538001) on the Barcoo River. Builder checks also distinguish conflicting station
+suffixes, reversed segment geometry and confluences from one continuous channel.
+
+The existing ten QFD-shaped application export scenarios still pass. Three new
+actual-app exports verify identical map/card/PDF ordering for both flood warning
+and flood watch selections, retained gauges when the reference fails, and
+cancellation of a pending reference lookup. A separate seven-page PDF used
+20 public-reference/synthetic validation gauges, one compact index page and five
+four-panel graph pages. Index and graph pages were rendered and inspected;
+image/text bounds, non-overlap and internal destinations were valid. Graphs and
+readings in that layout fixture are explicitly synthetic/unavailable.
+

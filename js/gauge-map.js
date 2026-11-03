@@ -4,6 +4,7 @@ import {annotations,wrap} from './renderer.js';
 import {layoutOutageLabels} from './map-labels.js';
 import {floodLegendLayout} from './flood-display.js';
 import {GAUGE_COLOURS} from './gauges.js';
+import {gaugeFlowSummary} from './gauge-flow.js';
 
 function lines(ctx,collection,project,stroke,width){ctx.strokeStyle=stroke;ctx.lineWidth=width;for(const feature of collection?.features||[]){ctx.beginPath();path(ctx,feature.geometry,project);ctx.stroke();}}
 export function drawGaugeMarkers(ctx,snapshot,gauges,width,height,{offsetY=0}={}){
@@ -29,8 +30,8 @@ export function gaugeMap(snapshot,gauges){
   for(const [index,[category,label]]of [['below','Below minor / no flooding'],['minor','Minor'],['moderate','Moderate'],['major','Major'],['unknown','Unknown / not supplied']].entries()){
     const x=16+index*(width-32)/5;ctx.fillStyle=GAUGE_COLOURS[category];ctx.fillRect(x,y+33,20,16);ctx.fillStyle='#333';ctx.fillText(label,x+27,y+46);
   }
-  ctx.fillStyle='#58636c';ctx.fillText(gauges.length+' gauges inside the selected flood area. G numbers match the gauge list and PDF.',16,y+72);
-  const footer=['Generated '+aest(snapshot.generated),snapshot.demo?'Synthetic fixtures - not operational observations.':'Sources: BoM river gauge observations, QFD 15-minute layer via authenticated ArcGIS; BoM flood warning/watch.',snapshot.context.credits?.copyrightText?'Basemap: '+snapshot.context.credits.copyrightText:'Basemap: Esri and contributors.'];
+  ctx.fillStyle='#58636c';ctx.fillText(gauges.length+' gauges. G numbers match the list/PDF. '+gaugeFlowSummary(gauges),16,y+72);
+  const footer=['Generated '+aest(snapshot.generated),snapshot.demo?'Synthetic fixtures - not operational observations.':'Sources: BoM observations / QFD, flood warnings and National Flood Gauge Network; Geofabric © Commonwealth of Australia (BoM) 2022 via Digital Atlas, Geoscience Australia.',snapshot.context.credits?.copyrightText?'Basemap: '+snapshot.context.credits.copyrightText:'Basemap: Esri and contributors.'];
   ctx.font='11px Arial';let fy=top+height+legendHeight+15;for(const line of footer.flatMap(text=>wrap(ctx,text,width-30))){ctx.fillText(line,15,fy);fy+=15;}
   return c;
 }

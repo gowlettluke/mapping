@@ -3,6 +3,7 @@ import {clean,verifiedTime,checkAbort,pooled,request,imageFromBlob,canvas,aest} 
 import {safeImageUrl} from './camera-images.js';
 import {maskContains} from './raster.js';
 import {isBomGraphUrl} from './graph-export.js';
+import {loadGaugeFlowReference,orderGaugesByFlow} from './gauge-flow.js';
 
 const key=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const names={
@@ -14,7 +15,9 @@ const names={
   observed:['observationtime','observationdatetime','observedat','observedtime','observationdate','readingtime','readingdatetime','timestamp'],
   updated:['fmetimestamp','lastupdate','lastupdated','lastupdatedat','updatedat','updatedtime','updatetime','sourceupdated','sourceupdatedat','lastediteddate'],
   graph:['urlchart','graphurl','hydrographurl','charturl','riverheightgraph','riverheightgraphurl','graphimageurl','imageurl','graph','hydrograph'],
-  source:['urlpage','sourceurl','stationurl','bomurl','bomlink','weblink','linkurl']
+  source:['urlpage','sourceurl','stationurl','bomurl','bomlink','weblink','linkurl'],
+  river:['stream','river','watercourse','rivername','streamname'],
+  basin:['basin','basinname','catchmentname']
 };
 export const GAUGE_COLOURS={major:'#ba2434',moderate:'#e68025',minor:'#e4c745',below:'#157f73',unknown:'#697783'};
 
@@ -50,7 +53,7 @@ export function normaliseGauges({collection,fields=[],popupInfo={},sourceLabel='
     if(!point||point.length<2||!point.slice(0,2).every(Number.isFinite)||Math.abs(point[0])>180||Math.abs(point[1])>90)continue;
     const stationId=clean(pick(values,'station')??''),name=clean(pick(values,'name')||(stationId?'Station '+stationId:''));if(!name)continue;
     const reportedCategory=clean(pick(values,'category')??'Classification not supplied'),observedAt=verifiedTime(pick(values,'observed')),updatedAt=verifiedTime(pick(values,'updated'));
-    rows.push({id:stationId||'feature:'+(feature.id??p.OBJECTID??p.objectid??point.join(',')),stationId,name,point:point.slice(0,2),height:heightValue(pick(values,'height')),reportedCategory,category:gaugeCategory(reportedCategory),trend:clean(pick(values,'trend')||''),observedAt,updatedAt,
+    rows.push({id:stationId||'feature:'+(feature.id??p.OBJECTID??p.objectid??point.join(',')),stationId,name,point:point.slice(0,2),river:clean(pick(values,'river')||''),basin:clean(pick(values,'basin')||''),height:heightValue(pick(values,'height')),reportedCategory,category:gaugeCategory(reportedCategory),trend:clean(pick(values,'trend')||''),observedAt,updatedAt,
       graphUrl:gaugeGraphLink(p,popupInfo,fields),sourceUrl:safeImageUrl(pick(values,'source'))||safeImageUrl(expand(popupInfo.mediaInfos?.find(media=>media.type==='image')?.value?.linkURL,p)),sourceLabel});
   }
   if(collection.features.length&&!rows.length)throw new Error('The gauge layer has no recognised station names and point locations.');return rows;
@@ -61,7 +64,10 @@ export function selectGauges(rows,masks){
     if(!previous||time>oldTime)byStation.set(gauge.id,gauge);
   }return [...byStation.values()].sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id)).map((gauge,index)=>({...gauge,label:'G'+(index+1)}));
 }
-export async function discoverGauges(connection,masks,signal){checkAbort(signal);const source=await connection.gaugeCollection(signal);checkAbort(signal);return selectGauges(normaliseGauges(source),masks);}
+export async function discoverGauges(connection,masks,signal,{flowReference=loadGaugeFlowReference}={}){
+  checkAbort(signal);const source=await connection.gaugeCollection(signal);checkAbort(signal);const gauges=selectGauges(normaliseGauges(source),masks);if(!gauges.length)return gauges;
+  let reference=null;try{reference=await flowReference(signal);}catch(error){checkAbort(signal);}checkAbort(signal);return orderGaugesByFlow(gauges,reference);
+}
 export function gaugeTiming(gauge,now=Date.now()){
   const old=(date,minutes)=>date&&now-date.getTime()>minutes*60000,future=date=>date&&date.getTime()>now+5*60000,notes=[];
   if(!gauge.observedAt||future(gauge.observedAt))notes.push('Observation time unverified');else if(old(gauge.observedAt,CONFIG.gauges.observationAgeMinutes))notes.push('Observation over '+CONFIG.gauges.observationAgeMinutes/60+' hours old');
