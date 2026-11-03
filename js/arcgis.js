@@ -96,14 +96,14 @@ export class ArcGISConnection {
     if(selected){item=this.featureChoices[key]?.find(candidate=>candidate.id===selected)||new this.sdk.PortalItem({id:selected,portal:this.portal});}
     else{
       for(const title of [spec.title,...(spec.alternatives||[])]){
-        const items=distinctFeatureItems(await this.search([title],spec.key?CAMERA_ITEM_TYPES:undefined,signal),spec.layer);checkAbort(signal);this.featureChoices[key]=items;
+        const items=distinctFeatureItems(await this.search([title],spec.itemTypes||(spec.key?CAMERA_ITEM_TYPES:undefined),signal),spec.layer);checkAbort(signal);this.featureChoices[key]=items;
         if(items.length>1)throw new Error('Multiple matching items. Choose the correct source below, then recheck layers.');
         if(items.length===1){item=items[0];break;}
       }
     }
     if(!item)throw new Error('No accessible layer item was found. Supply its ArcGIS item link below.');
     if(item.load)await item.load({signal});checkAbort(signal);
-    if(spec.key&&item.type&&!CAMERA_ITEM_TYPES.includes(item.type))throw new Error('Selected item is not a supported camera layer or web map.');
+    if(spec.key&&item.type&&!(spec.itemTypes||CAMERA_ITEM_TYPES).includes(item.type))throw new Error('Selected item is not a supported feature layer or web map.');
     this.featureItems.set(key,item);return item;
   }
   async cameraServiceCollection(item,layerId,signal){const collection=await this.featureCollection(item,layerId,signal);return resolveCameraAttachments({collection,url:item.url,layerId,request:this.sdk.esriRequest,signal});}
@@ -126,6 +126,18 @@ export class ArcGISConnection {
   }
   async districts(signal){return this.featureCollection(await this.featureItem(CONFIG.arcgis.districts,signal),CONFIG.arcgis.districts.layer,signal);}
   async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{return {key:spec.key,label:spec.label,collection:await this.cameraCollection(spec,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
+  async gaugeCollection(signal){
+    try{const spec=CONFIG.arcgis.gauges,item=await this.featureItem(spec,signal),url=new URL(featureQueryUrl(item.url,spec.layer));url.pathname=url.pathname.replace(/\/query$/,'');
+      const [metadata,collection,data]=await Promise.all([
+        this.sdk.esriRequest(url.href,{query:{f:'json'},responseType:'json',authMode:'no-prompt',timeout:20000,signal}).then(result=>result.data),
+        this.featureCollection(item,spec.layer,signal),
+        item.fetchData?item.fetchData('json',{signal}).catch(()=>{checkAbort(signal);return {};}):{}
+      ]);checkAbort(signal);
+      if(metadata?.error||metadata?.geometryType!=='esriGeometryPoint'||!Array.isArray(metadata.fields))throw new Error('Invalid gauge layer');
+      const layer=data?.layers?.find(layer=>Number(layer.id)===spec.layer)||data?.layers?.[spec.layer],popupInfo=layer?.popupInfo||data?.popupInfo||metadata.popupInfo||{},labels=new Map((popupInfo.fieldInfos||[]).map(field=>[field.fieldName,field.label]));
+      return {collection,fields:metadata.fields.map(field=>({...field,alias:labels.get(field.name)||field.alias,aliases:[field.alias].filter(Boolean)})),popupInfo,sourceLabel:spec.label};
+    }catch(error){checkAbort(signal);throw new Error('The river gauge layer could not be read with this ArcGIS session. Check its item selection and access.');}
+  }
   disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.featureChoices={};this.featureSelections.clear();this.featureItems.clear();this.portal=null;}
 }
 

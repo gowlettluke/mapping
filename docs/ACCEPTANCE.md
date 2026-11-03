@@ -160,3 +160,40 @@ The synthetic flood scan/export integration also passes. These checks do not
 establish live private camera permissions or photograph availability; recheck a
 selected flood area while signed in after deployment.
 
+## River gauge maps and combined flood PDFs — 4 November 2026
+
+All 106 unit tests and source/asset checks pass. Added coverage includes gauge
+field aliases and source domains, leading-zero station IDs, zero/missing heights,
+classification without height-based inference, separate/old/future timestamps,
+direct/media/HTML graph URLs, safe template substitution, authenticated metadata
+and feature requests, graph retrieval failures/cancellation, selected flood-mask
+scope, collocated stations and duplicate observations. PDF page planning and
+gauge-only missing-graph output are verified, including credential-free links.
+
+The actual application event handlers were exercised with a minimal DOM,
+native canvas, the bundled PDF library and synthetic signed-in services. Both
+warning/watch selections produced a third map and included only their own gauge
+and camera. Ten PDF exports covered combined, gauges-only and cameras-only
+options, missing graphs, no cameras, inaccessible photographs, unavailable gauge
+sources, and both existing storm/weather paths. Metadata/map generation fetched
+no graph images. Pending gauge lookup and graph export were cancelled by a scope
+change; old results/downloads could not replace the new selection. No-warning
+statewide products kept gauge/PDF lookup disabled. The earlier synthetic flood
+scan/export integration still passes.
+
+A separate full-size synthetic run produced four gauge markers, a seven-page
+combined report with six photos, and a four-page gauges-only report. Map, index
+and two-graph pages were rendered and visually inspected. The missing graph
+kept its reading and placeholder; the old observation retained its timestamp and
+age notice. All 12 validation PDFs were checked for valid internal destinations,
+credential-free external links and text inside page bounds. The seven-page
+combined fixture contained 54 navigation links.
+
+These checks do not access the user's private gauge layer or prove its live
+field/popup schema, permissions or graph-image CORS access. In the signed-in
+deployment, verify the discovered item (or choose its item-page link), compare
+station IDs/readings/timestamps to the source popup, and export a graph for each
+flood type. Image fields and popup image templates are supported; Arcade-built
+or native interactive charts require an exposed image source. Unavailable graph
+images must retain their station metadata instead of pretending a graph loaded.
+
