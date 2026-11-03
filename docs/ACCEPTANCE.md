@@ -92,3 +92,31 @@ Deployment order: merge the upstream `qldpoweroutages` collector, verify a poll
 has published successful `provider_council_counts` entries, then deploy Mapping.
 Older or failed upstream entries produce an omitted-section status note.
 
+## Flood display cleanup
+
+All 93 unit checks and source/asset checks pass. Coverage verifies configured
+warning/watch label IDs, native style selection, preservation of loaded legend
+metadata, registered/advertised legend requests, cancellation and safe failure,
+transparent label footprints, outage-number avoidance, foreground name order,
+and the absence of the added brown tracing on both flood JPEGs.
+
+Native-canvas synthetic scan/export checks pass for Flood Warning and Flood
+Watch. Each selected type requests only its own polygon, label layer and legend.
+Unavailable native names fall back to matching catchment references; unavailable
+legends remain explicit while both JPEGs still export. Warning failures still
+fail the scan, and an old flood selection is ignored on the storm tab.
+
+A synthetic pale cyan chevron fixture reduced pixels matching the added brown
+trace from 132,484 to zero. Its native pattern, colours and label remained clear;
+native names and a sparse-hatch catchment fallback left the original detection
+mask unchanged. All eight thunderstorm/severe-weather outputs (both products,
+active and no-warning cases) are pixel-identical to the deployed renderer. The
+synthetic flood export was visually inspected.
+
+These checks do not access the private live WMS; Chromium is unavailable in this
+workspace. In a signed-in deployment, verify the exact river/reach titles from
+the native label layer, the source legend and original symbology for each flood
+type. Missing legends must be labelled unavailable rather than replaced by a
+guessed key. No background or infrastructure-style redesign is part of this
+revision.
+
