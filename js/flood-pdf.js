@@ -8,20 +8,21 @@ const ascii=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/
 const gaugeRows=20,gaugeTextColours={major:[177,32,47],moderate:[148,111,0],minor:[26,114,69]};
 const gaugeColour=gauge=>gaugeTextColours[gauge.category]||[45,56,65];
 const shortTime=date=>date?aest(date).replace(/ AEST$/,''):'Not supplied';
-export function floodPdfPlan(gaugeCount,photoCount,{graphsPerPage=4}={}){
+export function floodPdfPlan(gaugeCount,photoCount,{graphsPerPage=4,flowDiagramPages=0}={}){
   if(!Number.isInteger(gaugeCount)||gaugeCount<0||!Number.isInteger(photoCount)||photoCount<0||gaugeCount+photoCount===0)throw new Error('No gauges or eligible camera photographs are available for this report.');
-  if(![4,6].includes(graphsPerPage))throw new Error('Unsupported graph page layout.');let next=1;const plan={gaugeCount,photoCount,graphsPerPage};
-  if(gaugeCount){plan.gaugeOverview=next++;plan.gaugeSummary=next;plan.gaugeSummaryPages=Math.ceil(gaugeCount/gaugeRows);next+=plan.gaugeSummaryPages;plan.gaugeGraphs=next;plan.gaugeGraphPages=Math.ceil(gaugeCount/graphsPerPage);next+=plan.gaugeGraphPages;}
+  if(![4,6].includes(graphsPerPage))throw new Error('Unsupported graph page layout.');
+  if(!Number.isInteger(flowDiagramPages)||flowDiagramPages<0||!gaugeCount&&flowDiagramPages)throw new Error('Invalid river flow diagram pages.');let next=1;const plan={gaugeCount,photoCount,graphsPerPage};
+  if(gaugeCount){plan.gaugeOverview=next++;if(flowDiagramPages){plan.gaugeFlow=next;plan.gaugeFlowPages=flowDiagramPages;next+=flowDiagramPages;}plan.gaugeSummary=next;plan.gaugeSummaryPages=Math.ceil(gaugeCount/gaugeRows);next+=plan.gaugeSummaryPages;plan.gaugeGraphs=next;plan.gaugeGraphPages=Math.ceil(gaugeCount/graphsPerPage);next+=plan.gaugeGraphPages;}
   if(photoCount){plan.cameraOverview=next++;plan.cameraIndex=next;plan.cameraIndexPages=Math.ceil(photoCount/24);next+=plan.cameraIndexPages;plan.cameraPhotos=next;plan.cameraPhotoPages=Math.ceil(photoCount/6);next+=plan.cameraPhotoPages;}
   plan.total=next-1;return plan;
 }
-export function floodReportPdf({jsPDF,snapshot,gauges=[],graphs=[],photos=[],gaugeOverview=null,cameraOverview=null,notes=[],signal,graphsPerPage=4}){
-  const plan=floodPdfPlan(gauges.length,photos.length,{graphsPerPage});checkAbort(signal);if(typeof jsPDF!=='function')throw new Error('The bundled PDF library did not load. Reload the page.');
+export function floodReportPdf({jsPDF,snapshot,gauges=[],graphs=[],photos=[],gaugeOverview=null,flowDiagrams=[],cameraOverview=null,notes=[],signal,graphsPerPage=4}){
+  const plan=floodPdfPlan(gauges.length,photos.length,{graphsPerPage,flowDiagramPages:flowDiagrams.length});checkAbort(signal);if(typeof jsPDF!=='function')throw new Error('The bundled PDF library did not load. Reload the page.');
   if(gauges.length&&!gaugeOverview||photos.length&&!cameraOverview)throw new Error('The report overview map is unavailable.');
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true}),graphFor=label=>graphs.find(entry=>entry.gauge.label===label),now=snapshot.generated.getTime();let page=0;
   function newPage(title){checkAbort(signal);if(page++)doc.addPage();doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(24,42,55);doc.text(ascii(title)+(snapshot.demo?' - DEMO / SYNTHETIC':''),9,12);
     doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(70);doc.text(ascii('Generated '+aest(snapshot.generated)),9,18);doc.setDrawColor(198,209,216);doc.line(9,21,288,21);doc.text('Page '+page+' of '+plan.total,288,204,{align:'right'});
-    let x=9;for(const [label,target]of [['Gauge map',plan.gaugeOverview],['Gauge index',plan.gaugeSummary],['Camera map',plan.cameraOverview],['Camera index',plan.cameraIndex]])if(target){doc.text(label,x,204);doc.link(x,199,29,7,{pageNumber:target});x+=34;}
+    let x=9;for(const [label,target]of [['Gauge map',plan.gaugeOverview],['River flow',plan.gaugeFlow],['Gauge index',plan.gaugeSummary],['Camera map',plan.cameraOverview],['Camera index',plan.cameraIndex]])if(target){doc.text(label,x,204);doc.link(x,199,29,7,{pageNumber:target});x+=34;}
   }
   function imageFit(image,x,y,width,height,format='JPEG'){const scale=Math.min(width/image.width,height/image.height),w=image.width*scale,h=image.height*scale,ix=x+(width-w)/2,iy=y+(height-h)/2;doc.addImage(image.data,format,ix,iy,w,h);return {x:ix,y:iy,width:w,height:h};}
   function sourceLink(url,x,y,width,height){const link=externalPhotoLink(url);if(link)doc.link(x,y,width,height,{url:link});}
@@ -29,6 +30,12 @@ export function floodReportPdf({jsPDF,snapshot,gauges=[],graphs=[],photos=[],gau
     newPage('Flood Situation Report - River Gauges');const box=imageFit(gaugeOverview,9,26,218,165);doc.setFontSize(9);doc.setTextColor(30,47,60);let y=31;
     for(const text of [snapshot.scopeLabel,gauges.length+' gauges in the selected flood area.','G numbers link to graph pages.',gaugeFlowSummary(gauges),...notes]){const lines=doc.splitTextToSize(ascii(text),53);doc.text(lines,233,y);y+=lines.length*4+7;}
     for(let i=0;i<gauges.length;i++){const marker=gauges[i].marker;if(marker)doc.link(box.x+marker.x/gaugeOverview.width*box.width-3,box.y+marker.y/gaugeOverview.height*box.height-3,6,6,{pageNumber:plan.gaugeGraphs+Math.floor(i/plan.graphsPerPage)});}
+    for(const [index,diagram]of flowDiagrams.entries()){
+      newPage('River Gauge Flow - '+(index+1)+' of '+flowDiagrams.length);const box=imageFit(diagram,9,26,279,166);
+      for(const node of diagram.nodes||[]){const gaugeIndex=gauges.findIndex(gauge=>gauge.label===node.label);if(gaugeIndex<0)continue;
+        doc.link(box.x+node.x/diagram.width*box.width,box.y+node.y/diagram.height*box.height,node.width/diagram.width*box.width,node.height/diagram.height*box.height,{pageNumber:plan.gaugeGraphs+Math.floor(gaugeIndex/plan.graphsPerPage)});
+      }
+    }
     for(let p=0;p<plan.gaugeSummaryPages;p++){
       newPage('River Gauge Index');const columns=[['Ref',12],['River / tributary',50],['Gauge / station ID',85],['Level (m)',21],['Classification',34],['Trend',23],['Observed (AEST)',54]],subset=gauges.slice(p*gaugeRows,(p+1)*gaugeRows),rowHeight=7.7,top=27;
       doc.setDrawColor(202,213,220);doc.rect(9,top,279,8+subset.length*rowHeight);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(30,47,60);let x=9;
