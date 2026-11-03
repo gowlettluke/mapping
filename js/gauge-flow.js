@@ -44,6 +44,9 @@ function directedChains(rows,reference){
 
 export function orderGaugesByFlow(gauges,reference=null){
   if(!gauges.length)return [];
+  // Connections are also used by the schematic across river/tributary groups.
+  // A corrupt reference must not leave any apparently verified flow arrows.
+  if(reference)try{validateGaugeFlowReference(reference);}catch{reference=null;}
   const lookup=new Map((reference?.stations||[]).map(station=>[stationKey(station.id),station])),matched=new Map(),buckets=new Map(),unknown=[];
   for(const gauge of gauges){const station=lookup.get(stationKey(gauge.stationId));
     if(!station||!validPoint(gauge.point)||distance(gauge.point,station.point)>1000){unknown.push(gauge);continue;}
@@ -58,7 +61,12 @@ export function orderGaugesByFlow(gauges,reference=null){
   }
   unknown.sort((a,b)=>wordKey(a.basin).localeCompare(wordKey(b.basin))||wordKey(sourceRiver(a)).localeCompare(wordKey(sourceRiver(b)))||byName(a,b));
   for(const gauge of unknown){const river=sourceRiver(gauge);output.push({...gauge,river,flowGroup:'Order unconfirmed'+(river?' — '+river:''),flowGroupId:'unconfirmed|'+wordKey(gauge.basin)+'|'+wordKey(river),flowOrder:'unconfirmed',flowReason:reference?'No verified station and location match in the river-network reference.':'River-network reference unavailable.'});}
-  return output.map((gauge,index)=>({...gauge,label:'G'+(index+1)}));
+  const ordered=output.map((gauge,index)=>({...gauge,label:'G'+(index+1)}));
+  const stationFor=gauge=>{const station=lookup.get(stationKey(gauge.stationId));return reference&&station&&validPoint(gauge.point)&&distance(gauge.point,station.point)<=1000?station:null;};
+  for(const gauge of ordered){const station=stationFor(gauge),targets=new Set((station?.downstream||[]).map(stationKey));
+    gauge.flowDownstream=ordered.filter(other=>other!==gauge&&stationFor(other)&&targets.has(stationKey(other.stationId))).map(other=>other.label);
+  }
+  return ordered;
 }
 
 export const gaugeFlowLabel=gauge=>gauge.flowGroup||'Order unconfirmed';
