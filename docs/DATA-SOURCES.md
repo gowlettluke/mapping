@@ -92,9 +92,13 @@ The optional gauge source is the signed-in organisation's **BOM Flood Gauges
 screenshots. The item title and layer number are configured; private service
 URLs and credentials are not committed. The user-confirmed item ID
 `1d05b9f286334868a2dd70079d963810` is loaded directly through the current portal
-session. Manual item choices override this default for the session, and remain
-available if the configured item cannot load. A failed gauge check never
-blocks the two existing map products or camera-only exports.
+session. A manual gauge choice overrides this default and is remembered locally
+under the organisation's portal URL; invalid saved IDs are ignored. Initial
+gauge lookup/query failure gets one automatic retry, with an overall 60-second
+connection-check deadline. The source control is prefilled with the selected
+default, so rechecking does not require retyping the ID. Private data and
+credentials are never persisted. A failed gauge check never blocks the two
+existing map products or camera-only exports.
 
 Service metadata, coded domains, field aliases and saved popup labels resolve
 station names/IDs, heights, source classifications, trends and timestamps.
@@ -148,12 +152,23 @@ hard-coded public print service or arbitrary proxy.
 Missing, blocked or unreadable graph images keep their station readings and an
 explicit unavailable placeholder. A graph's retrieval time is distinct from both the
 station observation time and the layer update time; retrieving a graph does not
-establish that its plotted observations are current. Standard 2:1 BoM charts use
-one PDF page each; charts at least 2.8 times as wide as they are high can use
-two per page. Map and station-index links follow the chosen page layout.
+establish that its plotted observations are current. Graph pages use a two-by-two
+grid of four images, retaining each source image's aspect ratio and link. The
+station index is a table of up to 20 gauges per page with station name/ID, height,
+reported classification, trend and observation time. Reported major rows use
+red text, moderate rows yellow and minor rows green; below-minor and unknown
+categories remain neutral. Map and station-index links follow the page layout.
 
 Age notices currently mark observations older than 120 minutes and layer updates
 older than 45 minutes; both values are in `CONFIG.gauges`. These notices retain
 the data and its reported classification. They are not the camera photograph
 one-hour exclusion rule and do not declare the observation invalid. Gauges-only
-PDFs remain available with no cameras and with missing graph images.
+PDFs remain available with no cameras and with missing graph images. In the
+compact index, an asterisk flags old/unverified observation or feed-update times;
+graph captions retain the separate observation, feed and retrieval timestamps.
+
+Both HTML entry points use a shared release tag for the entry module and an
+import map for the configuration, connection and PDF modules. This refreshes
+those browser module URLs together; update that tag in both pages when making
+another release of these modules. The source check validates their local assets,
+including import-map targets and query-string versioned paths.

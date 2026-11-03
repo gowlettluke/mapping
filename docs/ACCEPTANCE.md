@@ -243,3 +243,36 @@ organisation's private print helper and gauge feed still require a signed-in
 deployment check; the public service test verifies the standard export route,
 not the user's private permissions.
 
+## Compact gauge report and automatic startup — 4 November 2026
+
+The user confirmed that most graphs export, but one graph per page and the
+multi-line station index made reports too long. The supplied BoM PNG was compared
+at four and six graphs per landscape page. Four retains a larger, more readable
+axis/legend and is now the default in a two-by-two grid. A 25-gauge fixture uses
+two table pages and seven graph pages (ten pages including its map); its six-up
+comparison uses smaller charts. Both include a missing chart, unknown data, a
+long station name and an old observation. Rendered pages were visually inspected,
+with all image/text bounds and internal destinations valid and no image overlap.
+
+The index now has 20 table rows per page, retaining station name/ID, level,
+classification, trend and observation time. Reported major, moderate and minor
+rows are red, yellow and green respectively. Unknown/below-minor rows remain
+neutral. Classification labels remain visible; colours do not infer severity
+from height. A single compact footnote explains older/unverified time flags.
+
+The latest screenshot's ID matches the configured ID. That rules out another
+ID transcription change; the private-session startup failure could not be
+reproduced here. Gauge loading now retries once automatically, remembered manual
+gauge choices are scoped to their organisation, and the default is preselected
+before loading. Invalid saved choices are ignored. Versioned entry/configuration,
+connection and PDF module URLs refresh together through the HTML import map,
+preventing an older cached configuration being reused with this release.
+
+All 124 tests and syntax/asset checks pass, including automatic first-failure
+recovery without ID entry, cancellation, saved-choice isolation, four-up graph
+pagination/navigation, table overflow and source classification colours. Ten
+QFD-shaped actual-app PDF exports pass for both flood types, gauge/camera-only
+reports, source/image failures, cancellation and storm/weather regressions.
+The signed-in source still needs the user's deployment check; these tests do
+not establish their private service permissions.
+

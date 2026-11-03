@@ -7,6 +7,7 @@ import {resolveCameraAttachments} from './camera-images.js';
 import {renderGraphPrintImage} from './graph-export.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const gaugeSelectionKey=portal=>portal?.url?'qldMapping.gaugeItem.'+portal.url.replace(/\/$/,'').toLowerCase():null;
 const configuredWmsNames=new Set([...Object.values(CONFIG.profiles).flatMap(profile=>[...profile.warning,...profile.tracking,...(profile.labels||[])]),...CONFIG.radar.names]);
 function weatherFailure(role,stage,error){
   if(error?.name==='AbortError')return error;
@@ -91,10 +92,16 @@ export class ArcGISConnection {
     const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();return this.layers[role].route;
   }
   async verify(signal){await this.verifyRole('warning',signal);await this.verifyRole('radar',signal);}
-  setFeatureSelection(spec,value){const known=this.featureChoices[spec.key]?.find(item=>item.id===value),id=known?.id||arcgisItemId(value);this.featureSelections.set(spec.key,id);this.featureItems.delete(spec.key);}
+  setFeatureSelection(spec,value){const known=this.featureChoices[spec.key]?.find(item=>item.id===value),id=known?.id||arcgisItemId(value);this.featureSelections.set(spec.key,id);this.featureItems.delete(spec.key);
+    const key=spec.key==='gauges'&&gaugeSelectionKey(this.portal);if(key)try{globalThis.localStorage?.setItem(key,id);}catch{}
+  }
   async featureItem(spec,signal){
     const key=spec.key||'districts';if(this.featureItems.has(key))return this.featureItems.get(key);
-    const selected=this.featureSelections.get(key)||spec.itemId;let item;
+    let selected=this.featureSelections.get(key);if(!selected&&key==='gauges'){
+      try{const savedKey=gaugeSelectionKey(this.portal),saved=savedKey&&globalThis.localStorage?.getItem(savedKey);if(saved)selected=arcgisItemId(saved);}catch{}
+      selected||=spec.itemId;if(selected)this.featureSelections.set(key,selected);
+    }
+    selected||=spec.itemId;let item;
     if(selected){this.featureChoices[key]??=[];item=this.featureChoices[key].find(candidate=>candidate.id===selected)||new this.sdk.PortalItem({id:selected,portal:this.portal});}
     else{
       for(const title of [spec.title,...(spec.alternatives||[])]){
@@ -129,6 +136,12 @@ export class ArcGISConnection {
   async districts(signal){return this.featureCollection(await this.featureItem(CONFIG.arcgis.districts,signal),CONFIG.arcgis.districts.layer,signal);}
   async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{return {key:spec.key,label:spec.label,collection:await this.cameraCollection(spec,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
   async gaugeCollection(signal){
+    for(let attempt=0;attempt<2;attempt++){
+      try{return await this.readGaugeCollection(signal);}
+      catch(error){checkAbort(signal);this.featureItems.delete('gauges');if(attempt){throw new Error('The river gauge layer could not be read with this ArcGIS session. Recheck the connection or check layer access.');}await new Promise(resolve=>setTimeout(resolve,400));checkAbort(signal);}
+    }
+  }
+  async readGaugeCollection(signal){
     try{const spec=CONFIG.arcgis.gauges,item=await this.featureItem(spec,signal),url=new URL(featureQueryUrl(item.url,spec.layer));url.pathname=url.pathname.replace(/\/query$/,'');
       const [metadata,collection,data]=await Promise.all([
         this.sdk.esriRequest(url.href,{query:{f:'json'},responseType:'json',authMode:'no-prompt',timeout:20000,signal}).then(result=>result.data),
@@ -138,7 +151,7 @@ export class ArcGISConnection {
       if(metadata?.error||metadata?.geometryType!=='esriGeometryPoint'||!Array.isArray(metadata.fields))throw new Error('Invalid gauge layer');
       const layer=data?.layers?.find(layer=>Number(layer.id)===spec.layer)||data?.layers?.[spec.layer],popupInfo=layer?.popupInfo||data?.popupInfo||metadata.popupInfo||{},labels=new Map((popupInfo.fieldInfos||[]).map(field=>[field.fieldName,field.label]));
       return {collection,fields:metadata.fields.map(field=>({...field,alias:labels.get(field.name)||field.alias,aliases:[field.alias].filter(Boolean)})),popupInfo,sourceLabel:spec.label};
-    }catch(error){checkAbort(signal);throw new Error('The river gauge layer could not be read with this ArcGIS session. Check its item selection and access.');}
+    }catch(error){checkAbort(signal);throw new Error('The river gauge layer could not be read with this ArcGIS session. Check layer access.');}
   }
   disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.featureChoices={};this.featureSelections.clear();this.featureItems.clear();this.portal=null;}
 }
