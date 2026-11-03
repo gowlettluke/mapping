@@ -11,7 +11,7 @@ export const CONFIG = {
       {key:"bcc",title:"BCC_City_Resilience_cameras_view",alternatives:["BCC City Resilience cameras DataShare","BCC City Resilience cameras"],layer:0,label:"BCC City Resilience cameras"}
     ],
     districts:{title:"District_Disaster_Management_Groups_DDMG_Boundary_Status_Url",layer:0,nameField:"PROP_DD"},
-    gauges:{key:"gauges",title:"BOM Flood Gauges 15min QFD DataShare",alternatives:["BoM Flood Gauges 15min QFD DataShare"],layer:0,label:"BoM river gauges",itemTypes:["Feature Service","Map Service"]}
+    gauges:{key:"gauges",itemId:"1d05b9f286334868a2dd70079d963810",title:"BOM Flood Gauges 15min QFD DataShare",layer:0,label:"BoM river gauges",itemTypes:["Feature Service","Map Service"]}
   },
   publicSources:{
     lga:"https://spatial-gis.information.qld.gov.au/arcgis/rest/services/Boundaries/AdministrativeBoundaries/MapServer/1",

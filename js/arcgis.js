@@ -92,8 +92,8 @@ export class ArcGISConnection {
   setFeatureSelection(spec,value){const known=this.featureChoices[spec.key]?.find(item=>item.id===value),id=known?.id||arcgisItemId(value);this.featureSelections.set(spec.key,id);this.featureItems.delete(spec.key);}
   async featureItem(spec,signal){
     const key=spec.key||'districts';if(this.featureItems.has(key))return this.featureItems.get(key);
-    const selected=this.featureSelections.get(key);let item;
-    if(selected){item=this.featureChoices[key]?.find(candidate=>candidate.id===selected)||new this.sdk.PortalItem({id:selected,portal:this.portal});}
+    const selected=this.featureSelections.get(key)||spec.itemId;let item;
+    if(selected){this.featureChoices[key]??=[];item=this.featureChoices[key].find(candidate=>candidate.id===selected)||new this.sdk.PortalItem({id:selected,portal:this.portal});}
     else{
       for(const title of [spec.title,...(spec.alternatives||[])]){
         const items=distinctFeatureItems(await this.search([title],spec.itemTypes||(spec.key?CAMERA_ITEM_TYPES:undefined),signal),spec.layer);checkAbort(signal);this.featureChoices[key]=items;

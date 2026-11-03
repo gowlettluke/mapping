@@ -197,3 +197,13 @@ flood type. Image fields and popup image templates are supported; Arcade-built
 or native interactive charts require an exposed image source. Unavailable graph
 images must retain their station metadata instead of pretending a graph loaded.
 
+## Confirmed gauge item default — 4 November 2026
+
+The user confirmed the layer connected after entering the item ID visible in
+their registered-service URL. That ID is now the default for authenticated gauge
+loading; name-based discovery is no longer required. All 109 tests and source
+checks pass, including direct ID selection on the current portal, manual source
+override, cache reuse, a failed default retaining the source control, and
+sign-out restoring the configured default. Graph-image retrieval remains under
+investigation; an exact working graph URL is needed to verify that failure.
+

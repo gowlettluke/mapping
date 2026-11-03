@@ -90,8 +90,10 @@ failures do not turn an active flood area into a no-warning result.
 The optional gauge source is the signed-in organisation's **BOM Flood Gauges
 15min QFD DataShare** item, the point layer shown in the user's 4 November 2026
 screenshots. The item title and layer number are configured; private service
-URLs and credentials are not committed. Discovery uses the same portal session
-and item-choice control as other optional features. A failed gauge check never
+URLs and credentials are not committed. The user-confirmed item ID
+`1d05b9f286334868a2dd70079d963810` is loaded directly through the current portal
+session. Manual item choices override this default for the session, and remain
+available if the configured item cannot load. A failed gauge check never
 blocks the two existing map products or camera-only exports.
 
 Service metadata, coded domains, field aliases and saved popup labels resolve

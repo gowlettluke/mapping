@@ -5,10 +5,27 @@ import {ArcGISConnection} from '../js/arcgis.js';
 import {floodPdfPlan,floodReportPdf} from '../js/flood-pdf.js';
 import {setCanvasFactory} from '../js/utils.js';
 import {projectedBounds,pixelPoint} from '../js/geometry.js';
+import {CONFIG} from '../config.js';
 
 const now=Date.parse('2026-11-03T14:00:00Z'),feature=(properties={},point=[153,-27])=>({type:'Feature',id:1,properties,geometry:{type:'Point',coordinates:point}}),collection=features=>({type:'FeatureCollection',features});
 const sample={station_id:'0538001',station_name:'Barcoo River at Retreat',river_height:3.15,flood_classification:'Minor',trend:'Steady',observation_time:now-30*60000,last_update:now-5*60000};
 const normalise=(properties=sample,extra={})=>normaliseGauges({collection:collection([feature(properties)]),...extra})[0];
+test('the confirmed gauge item loads automatically by ID without a title search',async()=>{
+  const connection=new ArcGISConnection(),seen=[];connection.portal={url:'https://organisation.maps.arcgis.com'};
+  connection.search=async()=>{throw new Error('The exact gauge item must not depend on title search');};
+  connection.sdk={PortalItem:class{constructor(options){seen.push(options);this.id=options.id;this.type='Feature Service';}async load(){this.loaded=true;}}};
+  const item=await connection.featureItem(CONFIG.arcgis.gauges);assert.equal(item.id,'1d05b9f286334868a2dd70079d963810');assert.equal(item.loaded,true);assert.equal(seen[0].portal,connection.portal);assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)),item);assert.equal(seen.length,1);
+});
+test('manual gauge source choices override the configured default and replace its cached item',async()=>{
+  const connection=new ArcGISConnection();connection.sdk={PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){}}};
+  assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+  const other='abcdef0123456789abcdef0123456789';connection.setFeatureSelection(CONFIG.arcgis.gauges,other);assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,other);
+});
+test('an unavailable configured gauge item retains the manual-source control and sign-out restores the default',async()=>{
+  const connection=new ArcGISConnection();let fail=true;connection.sdk={identity:{destroyCredentials(){}},PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){if(fail)throw new Error('Not shared with this account');}}};
+  await assert.rejects(connection.featureItem(CONFIG.arcgis.gauges));assert.ok('gauges' in connection.featureChoices);connection.featureSelections.set('gauges','abcdef0123456789abcdef0123456789');connection.disconnect();fail=false;
+  assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+});
 test('gauge records preserve station IDs, source classification and separate observation/update times',()=>{
   const gauge=normalise();assert.equal(gauge.stationId,'0538001');assert.equal(gauge.height,3.15);assert.equal(gauge.category,'minor');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);assert.equal(gauge.graphUrl,'');
   const zero=normalise({...sample,river_height:0});assert.equal(zero.height,0);
