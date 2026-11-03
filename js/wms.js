@@ -67,6 +67,27 @@ function selectedStyles(config,layers){
     return typeof layer.style==='string'?layer.style:layer.style?.name||'';
   });
 }
+export function wmsLegendRequests(config,name,{allowUnlisted=false}={}){
+  const layers=selectWmsLayers(config,[name],[],{allowUnlisted}),url=mapUrl(config),style=selectedStyles(config,layers)[0];
+  for(const key of [...url.searchParams.keys()])if(['request','layers','styles','layer','style','bbox','width','height','srs','crs','format','transparent'].includes(key.toLowerCase()))url.searchParams.delete(key);
+  for(const [key,value] of Object.entries({service:'WMS',version:config.version,request:'GetLegendGraphic',layer:name,style,format:'image/png'}))setParameter(url,key,value);
+  const urls=[url.href];
+  // Advertised legend URLs are requested as supplied through IdentityManager;
+  // never copy registered URL parameters/credentials to another endpoint.
+  if(layers[0].legendUrl)try{urls.push(httpsUrl(layers[0].legendUrl).href);}catch{}
+  return [...new Set(urls)];
+}
+export async function renderWmsLegend({request,config,name,allowUnlisted=false,signal}){
+  for(const url of wmsLegendRequests(config,name,{allowUnlisted})){
+    let image;
+    try{checkAbort(signal);image=(await request(url,{responseType:'image',authMode:'no-prompt',timeout:7000,signal})).data;checkAbort(signal);
+      if(!image||!Number.isInteger(image.width)||!Number.isInteger(image.height)||image.width<1||image.height<1||image.width>2048||image.height>2048)throw new WmsError('Invalid flood legend image');
+      const c=canvas(image.width,image.height),ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,c.width,c.height).data;
+      let ink=false;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>20&&Math.min(pixels[i],pixels[i+1],pixels[i+2])<240){ink=true;break;}
+      if(!ink)throw new WmsError('Empty flood legend image');return c;
+    }catch(error){checkAbort(signal);}finally{image?.close?.();}
+  }throw new WmsError('Source flood legend is unavailable.');
+}
 function spatialReference(config){
   const supported=list(config.spatialReferences);
   if(!supported.length)return 3857;
@@ -175,3 +196,4 @@ export async function renderRegisteredWms({request,printTask,config,names,titles
   try{return {image:await renderWmsPrintImage({request,printTask,config,layers,extent,width,height,signal}),route:'print'};}
   catch(error){checkAbort(signal);if(error instanceof WmsError)throw error;throw new WmsError('Registered WMS rendering failed through the browser and organisation print service.');}
 }
+

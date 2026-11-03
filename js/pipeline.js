@@ -7,6 +7,8 @@ import {normaliseRoads,buildReport} from './report.js';
 import {providerCouncils} from './council-counts.js';
 import {aest,checkAbort} from './utils.js';
 import {floodReference} from './flood-references.js';
+import {nativeFloodLabels,catchmentFloodLabels,mapReservations} from './flood-display.js';
+import {withDeadline} from './connections.js';
 export function warningLgas(collection,masks){return collection.features.filter(f=>masks.some(m=>rasterIntersects(m,f.geometry)));}
 async function scan(connection,names,titles,extent,boundary,width,height,signal){const im=await connection.render('warning',extent,width,height,names,titles,signal),c=warningCanvas(im,width,height,extent,boundary);im.close?.();return {...analyseCanvas(c,extent),canvas:c};}
 export async function scanFloods(connection,signal,onProgress=()=>{}){
@@ -40,10 +42,24 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
     scopeMasks=refined.map(c=>c.mask);
   }
   if(active&&profile!=='flooding')scopeMasks=[weather.mask];if(!active)scopeMasks=[];
+  let floodDisplay=null;
+  if(active&&profile==='flooding'){
+    onProgress('Adding flood area names and the source legend...');const index=floodSelection.names[0]===spec.warning[1]?1:0,kind=index?'Flood Watch':'Flood Warning';
+    const optional=promise=>promise.catch(()=>{checkAbort(signal);return null;});
+    const names=optional(withDeadline(async s=>{const image=await connection.render('warning',extent,width,height,[spec.labels[index]],[],s);try{return nativeFloodLabels(warningCanvas(image,width,height,extent,boundary));}finally{image?.close?.();}},signal,20000));
+    const sourceLegend=optional(Promise.resolve().then(()=>connection.legend('warning',spec.warning[index],signal)));
+    let [labels,legend]=await Promise.all([names,sourceLegend]);checkAbort(signal);
+    if(!labels){let refs;try{refs=(await floodReference(index?'floodWatches':'floodWarnings',signal)).collection;}catch{checkAbort(signal);}
+      labels=catchmentFloodLabels(weather.mask,refs,{reserved:mapReservations(width,height,context.locator)});
+      if(!labels.boxes.length)notices.push('Flood area names could not be loaded.');
+    }
+    if(!legend)notices.push('The source flood legend could not be loaded.');
+    floodDisplay={kind,labels:labels.image,labelBoxes:labels.boxes,labelMode:labels.mode,legend};
+  }
   let trackingImage=null;if(tracking&&active&&spec.tracking.length){try{trackingImage=await connection.render('warning',extent,width,height,spec.tracking,[],signal);}catch{notices.push('Storm tracking was unavailable; it was omitted.');}}
   const affected=active?warningLgas(boundary,scopeMasks):boundary.features;if(active&&!affected.length)throw new Error('No Queensland LGA intersection could be verified for this warning');
   const generated=new Date(),roads=normaliseRoads(context.traffic,generated.getTime());
-  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,outageLabelMinimum,
+  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,outageLabelMinimum,floodDisplay,
     scopeLabel:active?(floodSelection?.title||affected.slice(0,3).map(lgaName).join(' / ')+(affected.length>3?' and surrounds':'')):'No active warning detected in Queensland'};
   const products=composeProducts({...snapshot,outages:context.outages});const blobs=await exportProducts(products);radar.close?.();trackingImage?.close?.();
   return {snapshot,products,blobs,notices};

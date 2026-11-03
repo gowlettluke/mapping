@@ -32,7 +32,8 @@ export const CONFIG = {
   profiles:{
     thunderstorm:{label:"Severe Thunderstorm",warning:["IDZ20006"],titles:["Severe Thunderstorm Warning | Australia"],tracking:["IDZ20007_track","IDZ20007"]},
     severeWeather:{label:"Severe Weather",warning:["IDZ20005"],titles:["Severe Weather Warning | Australia"],tracking:[]},
-    flooding:{label:"Flooding",warning:["IDZ20013","IDZ20016"],titles:["Flood Warning | Australia","Flood Watch | Australia"],tracking:[]}
+    flooding:{label:"Flooding",warning:["IDZ20013","IDZ20016"],titles:["Flood Warning | Australia","Flood Watch | Australia"],labels:["IDZ20013_label","IDZ20016_label"],tracking:[]}
   },
   radar:{names:["IDR00010"],titles:["Radar Rain Rate | Australia | raster"]}
 };
+

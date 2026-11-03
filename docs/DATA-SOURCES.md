@@ -52,3 +52,33 @@ The recovered implementation description supplied on 27 October 2026 confirmed s
 `js/wms.js` builds each render independently from that registered definition. It preserves vendor parameters and replaces only the fields that select the requested image operation, extent, native names/styles and pixel size. Direct image access uses ArcGIS `esriRequest`; if unavailable, the portal-configured print task receives the registered WMS definition via POST. Print output is a transparent PNG containing only the selected WMS layer, without a basemap or page surround. Aspect-ratio expansion is explicitly cropped back to the requested extent so warning pixels remain aligned with LGA analysis. Synchronous and asynchronous Export Web Map tasks are supported. Errors identifying failed layers are rejected even if the service also supplies an output image. No generic sharing proxy is used.
 
 The organisation's print server still needs access to the registered WMS configuration. Adding the fallback does not itself grant that access or prove live operation. Runtime configuration, request URLs and GP messages can contain sensitive parameters; they are not persisted or included in exported maps/reports or user-facing errors.
+
+## Flood display
+
+Flood JPEGs retain the original WMS image. They skip the additional brown
+`outlineCanvas` pass: tracing every edge in a colour-detection mask also traces
+internal hatching and can turn fine source patterns into dense brown shading.
+Storm and severe-weather rendering retain their existing outline. Basemap,
+LGA/coast/state styling, road symbology, outage shading and label thresholds are
+unchanged.
+
+`IDZ20013_label` / `IDZ20016_label` are requested separately for the selected
+warning/watch type. Their readable transparent image gets a white halo and is
+drawn above the map overlays in both JPEGs. Blank/opaque substitutes are rejected.
+Name footprints reserve space in the existing outage-number layout. None of the
+label pixels enter warning detection, area selection, affected-LGA calculations
+or report totals. If native labels are unavailable or blank at the requested
+scale, names from the corresponding BoM reference catchments are placed only
+where those catchments overlap actual detected warning pixels. This fallback
+provides catchment names; it does not invent finer river-reach titles or imply
+that an inactive reference polygon is a warning.
+
+The flood legend is the source's image, selected for the same warning/watch
+layer and native style. The registered GetLegendGraphic operation is tried
+first, followed by the advertised `legendUrl` if provided. Both use the
+authenticated SDK; registered request parameters are never copied to an
+advertised endpoint. [Esri documents this WMS sublayer legend URL](https://developers.arcgis.com/javascript/latest/references/core/layers/support/WMSSublayer/#legendUrl).
+An unreadable, blank or unavailable source legend produces an explicit notice
+in the export and interface. The app never guesses severity meanings from pixel
+colours or substitutes the old yellow warning swatch. Optional name/legend
+failures do not turn an active flood area into a no-warning result.

@@ -1,12 +1,12 @@
 import {CONFIG} from '../config.js';
 import {checkAbort,clean} from './utils.js';
 import {withDeadline} from './connections.js';
-import {registeredWmsConfig,renderRegisteredWms,WmsError} from './wms.js';
+import {registeredWmsConfig,renderRegisteredWms,renderWmsLegend,WmsError} from './wms.js';
 import {CAMERA_ITEM_TYPES,arcgisItemId,distinctFeatureItems,embeddedCameraCollection,featureQueryUrl} from './portal-features.js';
 import {resolveCameraAttachments} from './camera-images.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-const configuredWmsNames=new Set([...Object.values(CONFIG.profiles).flatMap(profile=>[...profile.warning,...profile.tracking]),...CONFIG.radar.names]);
+const configuredWmsNames=new Set([...Object.values(CONFIG.profiles).flatMap(profile=>[...profile.warning,...profile.tracking,...(profile.labels||[])]),...CONFIG.radar.names]);
 function weatherFailure(role,stage,error){
   if(error?.name==='AbortError')return error;
   if(error instanceof WmsError)return new Error(`${role==='warning'?'Warning':'Radar'}: ${error.message}`);
@@ -65,7 +65,7 @@ export class ArcGISConnection {
       await withDeadline(s=>layer.load({signal:s}),signal,10000);checkAbort(signal);loaded=true;
       sdkData=layer.toJSON?.()||{url:layer.url,mapUrl:layer.mapUrl,version:layer.version,
         customParameters:layer.customParameters,customLayerParameters:layer.customLayerParameters};
-      sdkData={...sdkData,layers:[...(sdkData.layers||[]),...(layer.allSublayers?.toArray()||[]).map(s=>({name:s.name,title:s.title,...(s.style!=null?{style:s.style}:{})}))]};
+      sdkData={...sdkData,layers:[...(sdkData.layers||[]),...(layer.allSublayers?.toArray()||[]).map(s=>({name:s.name,title:s.title,...(s.style!=null?{style:s.style}:{}),...(s.legendUrl?{legendUrl:s.legendUrl}:{})}))]};
     }catch(error){layer.destroy();checkAbort(signal);}
     let config;try{config=registeredWmsConfig(item,data,sdkData);}catch(error){if(loaded)layer.destroy();throw weatherFailure(role,'registered configuration',error);}
     if(signal?.aborted){if(loaded)layer.destroy();checkAbort(signal);}this.layers[role]?.base?.destroy();
@@ -80,6 +80,10 @@ export class ArcGISConnection {
         config:record.config,names,titles,extent,width,height,signal:s,preferPrint:record.route==='print',allowUnlisted:names.every(name=>configuredWmsNames.has(name))});
       checkAbort(s);record.route=result.route;return result.image;
     },signal,80000);}catch(error){throw weatherFailure(role,'map image',error);}
+  }
+  async legend(role,name,signal){checkAbort(signal);const record=this.layers[role];if(!record)throw new Error('Connect the warning layer first');
+    try{return await withDeadline(s=>renderWmsLegend({request:this.sdk.esriRequest,config:record.config,name,allowUnlisted:configuredWmsNames.has(name),signal:s}),signal,18000);}
+    catch(error){throw weatherFailure(role,'legend',error);}
   }
   async verifyRole(role,signal){const e=[15330000,-3300000,17160000,-1000000],spec=role==='warning'?CONFIG.profiles.thunderstorm:CONFIG.radar;
     const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();return this.layers[role].route;
@@ -124,3 +128,4 @@ export class ArcGISConnection {
   async cameraCollections(signal){return Promise.all(CONFIG.arcgis.cameras.map(async spec=>{try{return {key:spec.key,label:spec.label,collection:await this.cameraCollection(spec,signal)};}catch(error){return {key:spec.key,label:spec.label,error};}}));}
   disconnect(){this.sdk?.identity.destroyCredentials();for(const v of Object.values(this.layers))v.base?.destroy();this.layers={};this.choices={};this.featureChoices={};this.featureSelections.clear();this.featureItems.clear();this.portal=null;}
 }
+

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {registeredWmsConfig,selectWmsLayers,wmsMapRequest,wmsPrintMap,renderRegisteredWms} from '../js/wms.js';
+import {registeredWmsConfig,selectWmsLayers,wmsMapRequest,wmsPrintMap,renderRegisteredWms,wmsLegendRequests,renderWmsLegend} from '../js/wms.js';
 import {setCanvasFactory} from '../js/utils.js';
 import {ArcGISConnection} from '../js/arcgis.js';
 
@@ -14,7 +14,8 @@ const extent=[0,0,200,100];
 const task='https://print.example/GPServer/Export%20Web%20Map%20Task';
 const metadata={executionType:'esriExecutionTypeSynchronous',parameters:[{name:'Web_Map_as_JSON'},{name:'Format',choiceList:['PDF','PNG32']},{name:'Output_File',direction:'esriGPParameterDirectionOutput',dataType:'GPDataFile'}]};
 let draws=[];
-setCanvasFactory((width,height)=>({width,height,getContext:()=>({drawImage:(...args)=>draws.push(args),getImageData:()=>({data:new Uint8ClampedArray(4)})})}));
+const canvasFactory=(width,height)=>({width,height,getContext:()=>({drawImage:(...args)=>draws.push(args),getImageData:()=>({data:new Uint8ClampedArray(4)})})});
+setCanvasFactory(canvasFactory);
 const image=(width=200,height=100)=>({width,height,close(){this.closed=true;}});
 
 test('registered mapUrl wins over advertised capabilities and preserves each parameter family',()=>{
@@ -47,13 +48,28 @@ test('known catalogues reject absent native layers instead of producing a partia
 test('configured flood IDs missing from saved item layers reach the service with their own default style',async()=>{
   const c=registeredWmsConfig(item,{...definition,visibleLayers:['IDZ20006'],customLayerParameters:{STYLES:'storm-only'}}),original=structuredClone(c),calls=[],connection=new ArcGISConnection();
   connection.layers.warning={config:c,route:null};connection.sdk={esriRequest:async(url,options)=>{calls.push({url,options});return {data:image()};}};
-  for(const name of ['IDZ20013','IDZ20016']){const result=await connection.render('warning',extent,200,100,[name]);assert.equal(result.width,200);const call=calls.at(-1),url=new URL(call.url);assert.equal(url.searchParams.get('layers'),name);assert.equal(url.searchParams.get('styles'),'');assert.equal(url.searchParams.get('route'),'kept');assert.equal(call.options.authMode,'no-prompt');}
+  for(const name of ['IDZ20013','IDZ20016','IDZ20013_label','IDZ20016_label']){const result=await connection.render('warning',extent,200,100,[name]);assert.equal(result.width,200);const call=calls.at(-1),url=new URL(call.url);assert.equal(url.searchParams.get('layers'),name);assert.equal(url.searchParams.get('styles'),'');assert.equal(url.searchParams.get('route'),'kept');assert.equal(call.options.authMode,'no-prompt');}
   assert.deepEqual(c,original);const count=calls.length;await assert.rejects(connection.render('warning',extent,200,100,['missing']),/required native WMS sublayer/);assert.equal(calls.length,count);
 });
 test('flood label-only sublayers cannot substitute for the configured warning area geometry',()=>{
   const c=registeredWmsConfig(item,{...definition,layers:[{name:'IDZ20013_label',title:'Flood Warning | Australia'}]});
   assert.equal(selectWmsLayers(c,['IDZ20013'],['Flood Warning | Australia'],{allowUnlisted:true})[0].name,'IDZ20013');
   assert.throws(()=>selectWmsLayers(c,['IDZ20013'],['Flood Warning | Australia']),/required native WMS sublayer/);
+});
+test('source flood legend selects the matching layer and preserves registered request parameters without exporting them elsewhere',()=>{
+  const c=registeredWmsConfig(item,{...definition,visibleLayers:['IDZ20006'],customLayerParameters:{STYLES:'storm-only'},layers:[...definition.layers,{name:'IDZ20013',legendUrl:'https://public.example/flood-legend.png'}]});
+  const original=structuredClone(c),urls=wmsLegendRequests(c,'IDZ20013'),url=new URL(urls[0]);
+  assert.equal(url.searchParams.get('request'),'GetLegendGraphic');assert.equal(url.searchParams.get('layer'),'IDZ20013');assert.equal(url.searchParams.get('style'),'');assert.equal(url.searchParams.get('route'),'kept');assert.equal(url.searchParams.has('layers'),false);assert.equal(url.searchParams.has('styles'),false);assert.equal(urls[1],'https://public.example/flood-legend.png');assert.deepEqual(c,original);
+});
+test('source legend can use the advertised image through the SDK when the registered legend operation fails',async()=>{
+  const c=config();c.layers.push({name:'IDZ20013',legendUrl:'https://public.example/flood-legend.png'});const calls=[],source=image(300,90),controller=new AbortController();
+  setCanvasFactory((width,height)=>({width,height,getContext:()=>({drawImage(){},getImageData:()=>({data:Uint8ClampedArray.of(10,50,100,255)})})}));
+  try{const result=await renderWmsLegend({config:c,name:'IDZ20013',signal:controller.signal,request:async(url,options)=>{calls.push({url,options});if(calls.length===1)throw new TypeError('Blocked');return {data:source};}});assert.equal(result.width,300);assert.equal(calls.length,2);assert.equal(calls[1].options.authMode,'no-prompt');assert.equal(calls[1].options.signal,controller.signal);assert.equal(source.closed,true);}finally{setCanvasFactory(canvasFactory);}
+});
+test('unreadable or missing legends fail explicitly without exposing request details',async()=>{
+  const c=config();await assert.rejects(renderWmsLegend({config:c,name:'IDZ20013',allowUnlisted:true,request:async()=>({data:image()})}),/Source flood legend is unavailable/);
+  await assert.rejects(renderWmsLegend({config:c,name:'IDZ20013',allowUnlisted:true,request:async()=>{throw new Error('https://private.example?token=SECRET');}}),error=>error.message==='Source flood legend is unavailable.');
+  const controller=new AbortController();controller.abort();let called=false;await assert.rejects(renderWmsLegend({config:c,name:'IDZ20013',allowUnlisted:true,signal:controller.signal,request:async()=>{called=true;}}),{name:'AbortError'});assert.equal(called,false);
 });
 test('configured flood layers absent from saved metadata also use the authenticated print fallback',async()=>{
   const calls=[],c=registeredWmsConfig(item,{...definition,visibleLayers:['IDZ20006'],customLayerParameters:{STYLES:'storm-only'}}),connection=new ArcGISConnection();
@@ -149,3 +165,4 @@ test('overlapping warning and tracking requests keep their own names and styles'
   assert.equal(calls[0].searchParams.get('layers'),'IDZ20006');assert.equal(calls[0].searchParams.get('styles'),'warning-style');
   assert.equal(calls[1].searchParams.get('layers'),'IDZ20007_track,IDZ20007');assert.equal(calls[1].searchParams.get('styles'),'track-style,cell-style');
 });
+
