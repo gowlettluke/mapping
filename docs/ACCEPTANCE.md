@@ -138,3 +138,25 @@ excluded. These are dated regression observations, not permanent expected
 outage counts. Freshness, reconciliation, duplicate detection and source
 failure checks retain their existing behaviour.
 
+## Flood camera reports
+
+All 96 tests and source/asset checks pass. Camera discovery and PDF generation
+now run for active flood warnings and watches using the selected snapshot's
+scope masks. Flood products retain their existing district-analysis behaviour.
+Changing the flood area or warning tab clears camera results and cancels pending
+lookup/photo work. A no-active-warning statewide snapshot keeps PDFs disabled.
+
+The actual application event handlers were exercised with a minimal DOM and
+synthetic signed-in services. Separate warning/watch selections each included
+only their own camera, excluded neighbouring and outside cameras, enabled the
+PDF button and produced a three-page PDF through the bundled library. Camera
+lookup fetched metadata only; photographs were requested on PDF generation.
+Both PDFs were rendered and visually inspected. A pending lookup discarded its
+results after a selection change, and thunderstorm/severe-weather camera paths
+continued to work. The same flood-camera check fails against the previous app
+at its explicit Flooding-tab exclusion.
+
+The synthetic flood scan/export integration also passes. These checks do not
+establish live private camera permissions or photograph availability; recheck a
+selected flood area while signed in after deployment.
+
