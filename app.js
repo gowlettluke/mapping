@@ -8,6 +8,7 @@ import {cameraPdf} from './js/pdf.js';
 import {discoverGauges,retrieveGaugeGraphs,gaugeReading,gaugeTime,gaugeTiming,GAUGE_COLOURS} from './js/gauges.js';
 import {gaugeMap} from './js/gauge-map.js';
 import {floodReportPdf} from './js/flood-pdf.js';
+import {gaugeFlowLabel,gaugeFlowSummary} from './js/gauge-flow.js';
 import {aest,stamp,errorText,download,checkAbort,canvasBlob} from './js/utils.js';
 import {lgaName} from './js/geometry.js';
 import {FEEDS,readyForMaps,withDeadline,checkLayerConnections} from './js/connections.js';
@@ -60,8 +61,9 @@ async function loadGauges(snapshot,run,signal){
   try{const gauges=demo?(await import('./js/demo.js')).demoGauges(snapshot):await discoverGauges(connection,snapshot.scopeMasks,signal);checkAbort(signal);if(run!==state.version)return;
     const map=gaugeMap(snapshot,gauges),blob=await canvasBlob(map);checkAbort(signal);if(run!==state.version)return;state.gauges=gauges;state.gaugeMap=map;state.gaugeStatus='ready';
     addProduct(blob,'Flood Warning / Watch + River Gauges',(demo?'DEMO-':'')+'flooding-'+stamp(snapshot.generated)+'-gauges.jpg');$('mapCount').textContent='Three JPEG exports';
-    $('gaugeStatus').textContent=gauges.length+' river gauges inside the selected flood area. Observation and feed-update times are shown separately. Graphs load on request.';
+    $('gaugeStatus').textContent=gauges.length+' river gauges inside the selected flood area. '+gaugeFlowSummary(gauges)+' Graphs load on request.';
     for(const gauge of gauges){const card=document.createElement('article');card.className='camera-item gauge-item';card.style.borderLeftColor=GAUGE_COLOURS[gauge.category];const title=document.createElement('strong');title.textContent=gauge.label+' · '+gauge.name+(gauge.stationId?' ['+gauge.stationId+']':'');const reading=document.createElement('p');reading.textContent=gaugeReading(gauge);const observed=document.createElement('small');observed.textContent='Observed: '+gaugeTime(gauge.observedAt);const updated=document.createElement('small');updated.textContent='Feed updated: '+gaugeTime(gauge.updatedAt);card.append(title,reading,observed,updated);
+      const flow=document.createElement('small');flow.textContent=gaugeFlowLabel(gauge);card.append(flow);
       const timing=gaugeTiming(gauge,snapshot.generated.getTime());if(timing.length){const warning=document.createElement('small');warning.className='gauge-age';warning.textContent=timing.join(' · ');card.append(warning);}
       if(gauge.graphUrl){const link=document.createElement('a');link.href=gauge.graphUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open source graph';card.append(link);}else{const note=document.createElement('small');note.textContent='Graph link not supplied by the layer.';card.append(note);}$('gaugeList').append(card);
     }
