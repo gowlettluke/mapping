@@ -2,6 +2,7 @@ import {CONFIG} from '../config.js';
 import {clean,verifiedTime,checkAbort,pooled,request,imageFromBlob,canvas,aest} from './utils.js';
 import {safeImageUrl} from './camera-images.js';
 import {maskContains} from './raster.js';
+import {isBomGraphUrl} from './graph-export.js';
 
 const key=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const names={
@@ -72,8 +73,10 @@ export function gaugeTime(date){return date?aest(date):'Not supplied / unverifie
 export async function retrieveGaugeGraphs(gauges,{connection,signal,onProgress=()=>{}}={}){
   let completed=0;const entries=await pooled(gauges,4,async gauge=>{checkAbort(signal);let image;
     try{if(!gauge.graphUrl)return {gauge,graph:null,reason:'Graph link not supplied by the layer'};
-      const url=new URL(gauge.graphUrl),blob=connection?.sdk&&/(^|\.)arcgis\.com$/i.test(url.hostname)?(await connection.sdk.esriRequest(gauge.graphUrl,{responseType:'blob',authMode:'no-prompt',timeout:20000,signal})).data:await(await request(gauge.graphUrl,{signal,timeout:20000})).blob();
-      checkAbort(signal);if(!blob?.size)throw new Error('Empty graph');image=await imageFromBlob(blob);checkAbort(signal);if(image.width<150||image.height<60)throw new Error('Unreadable graph');
+      try{const url=new URL(gauge.graphUrl),blob=connection?.sdk&&/(^|\.)arcgis\.com$/i.test(url.hostname)?(await connection.sdk.esriRequest(gauge.graphUrl,{responseType:'blob',authMode:'no-prompt',timeout:20000,signal})).data:await(await request(gauge.graphUrl,{signal,timeout:20000})).blob();
+        checkAbort(signal);if(!blob?.size)throw new Error('Empty graph');image=await imageFromBlob(blob);
+      }catch(error){checkAbort(signal);if(!connection?.graphImage||!isBomGraphUrl(gauge.graphUrl)||!['TypeError','SecurityError','NetworkError'].includes(error.name))throw error;image=await connection.graphImage(gauge.graphUrl,signal);}
+      checkAbort(signal);if(image.width<150||image.height<60)throw new Error('Unreadable graph');
       const scale=Math.min(1,1800/image.width,1000/image.height),c=canvas(Math.round(image.width*scale),Math.round(image.height*scale)),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);
       return {gauge,graph:{data:c.toDataURL('image/png'),width:c.width,height:c.height,format:'PNG',retrievedAt:new Date()}};
     }catch(error){checkAbort(signal);return {gauge,graph:null,reason:'Graph could not be retrieved'};}

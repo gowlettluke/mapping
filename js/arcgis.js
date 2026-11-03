@@ -4,6 +4,7 @@ import {withDeadline} from './connections.js';
 import {registeredWmsConfig,renderRegisteredWms,renderWmsLegend,WmsError} from './wms.js';
 import {CAMERA_ITEM_TYPES,arcgisItemId,distinctFeatureItems,embeddedCameraCollection,featureQueryUrl} from './portal-features.js';
 import {resolveCameraAttachments} from './camera-images.js';
+import {renderGraphPrintImage} from './graph-export.js';
 let modulesPromise;
 const itemTitle=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const configuredWmsNames=new Set([...Object.values(CONFIG.profiles).flatMap(profile=>[...profile.warning,...profile.tracking,...(profile.labels||[])]),...CONFIG.radar.names]);
@@ -85,6 +86,7 @@ export class ArcGISConnection {
     try{return await withDeadline(s=>renderWmsLegend({request:this.sdk.esriRequest,config:record.config,name,allowUnlisted:configuredWmsNames.has(name),signal:s}),signal,18000);}
     catch(error){throw weatherFailure(role,'legend',error);}
   }
+  async graphImage(url,signal){return withDeadline(s=>renderGraphPrintImage({url,request:this.sdk.esriRequest,printTask:this.portal?.helperServices?.printTask?.url,signal:s}),signal,80000);}
   async verifyRole(role,signal){const e=[15330000,-3300000,17160000,-1000000],spec=role==='warning'?CONFIG.profiles.thunderstorm:CONFIG.radar;
     const image=await this.render(role,e,128,160,spec.warning||spec.names,spec.titles,signal);if(!image||!image.width||!image.height)throw new Error('The '+role+' service did not return an image');image.close?.();return this.layers[role].route;
   }

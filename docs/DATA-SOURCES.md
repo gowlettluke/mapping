@@ -133,11 +133,24 @@ and [image value](https://developers.arcgis.com/web-map-specification/objects/va
 specifications.
 
 Only graph export retrieves image bodies. ArcGIS-hosted images use the current
-SDK session; public image requests do not receive ArcGIS credentials. Missing,
-blocked or unreadable graph images keep their station readings and an explicit
-unavailable placeholder. A graph's retrieval time is distinct from both the
+SDK session; public image requests do not receive ArcGIS credentials. If a
+public BoM PNG cannot be read because of a browser network/cross-origin error,
+`js/graph-export.js` can render that image through the current portal's configured
+Export Web Map task. The fallback accepts only HTTPS `bom.gov.au` / `www.bom.gov.au`
+`/fwo/PRODUCT/PRODUCT.STATION.png` links without credentials, query strings or
+fragments. It uses the supplied URL, not a guessed station path. Display-only
+image loading reads the source dimensions; the print payload contains only the
+public image and an anonymous point, with no station attributes or private
+service URLs. Native aspect ratio is retained and blank print output is rejected.
+Explicit readable HTTP refusals do not trigger this fallback. There is no
+hard-coded public print service or arbitrary proxy.
+
+Missing, blocked or unreadable graph images keep their station readings and an
+explicit unavailable placeholder. A graph's retrieval time is distinct from both the
 station observation time and the layer update time; retrieving a graph does not
-establish that its plotted observations are current.
+establish that its plotted observations are current. Standard 2:1 BoM charts use
+one PDF page each; charts at least 2.8 times as wide as they are high can use
+two per page. Map and station-index links follow the chosen page layout.
 
 Age notices currently mark observations older than 120 minutes and layer updates
 older than 45 minutes; both values are in `CONFIG.gauges`. These notices retain
