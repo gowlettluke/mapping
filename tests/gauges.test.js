@@ -30,6 +30,18 @@ test('gauge records preserve station IDs, source classification and separate obs
   const gauge=normalise();assert.equal(gauge.stationId,'0538001');assert.equal(gauge.height,3.15);assert.equal(gauge.category,'minor');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);assert.equal(gauge.graphUrl,'');
   const zero=normalise({...sample,river_height:0});assert.equal(zero.height,0);
 });
+test('QFD table fields supply station ID, classification, tendency, observation and FME update times',()=>{
+  const gauge=normalise({StationNum:'058234',Name:'Rocky Creek at Rocky Creek',Height:-.05,Class:'No Classification',Tendency:'Steady','Observation Time':now-30*60000,FMETimestamp:now-5*60000,URLChart:'https://graphs.example/actual-chart.png',URLPage:'https://graphs.example/station-page.shtml',ClassRank:-999});
+  assert.equal(gauge.stationId,'058234');assert.equal(gauge.name,'Rocky Creek at Rocky Creek');assert.equal(gauge.height,-.05);assert.equal(gauge.reportedCategory,'No Classification');assert.equal(gauge.category,'unknown');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);
+  assert.equal(gauge.graphUrl,'https://graphs.example/actual-chart.png');assert.equal(gauge.sourceUrl,'https://graphs.example/station-page.shtml');
+  for(const classification of ['Minor','Moderate','Major'])assert.equal(normalise({StationNum:538001,Name:'Source station',Height:3.15,Class:classification}).category,classification.toLowerCase());
+});
+test('QFD URLChart takes precedence over a popup page link and URLPage is never guessed to be an image',()=>{
+  const popupInfo={mediaInfos:[{type:'image',value:{sourceURL:'{URLPage}'}}]},gauge=normalise({StationNum:538001,Name:'Source station',URLChart:'https://graphs.example/chart.png',URLPage:'https://graphs.example/page.shtml'}, {popupInfo});
+  assert.equal(gauge.graphUrl,'https://graphs.example/chart.png');assert.equal(gauge.sourceUrl,'https://graphs.example/page.shtml');
+  assert.equal(gaugeGraphLink({StationNum:538001,URLPage:'https://graphs.example/page.shtml'}),'');
+  assert.equal(normalise({StationNum:538001,Name:'Source station',Height:8,ClassRank:3}).category,'unknown');
+});
 test('field aliases and coded domains supply source labels without inferring severity from height',()=>{
   const gauge=normalise({s:'538001',n:'Example station',h:'3.15 m',c:2,o:now,u:now},{fields:[{name:'s',alias:'Station ID'},{name:'n',alias:'Station name'},{name:'h',alias:'River height (m)'},{name:'c',alias:'Flood classification',domain:{codedValues:[{code:2,name:'Moderate'}]}},{name:'o',alias:'Observation time'},{name:'u',alias:'Last update'}]});
   assert.equal(gauge.stationId,'538001');assert.equal(gauge.name,'Example station');assert.equal(gauge.category,'moderate');assert.equal(gauge.height,3.15);assert.equal(+gauge.observedAt,now);

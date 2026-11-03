@@ -207,3 +207,14 @@ override, cache reuse, a failed default retaining the source control, and
 sign-out restoring the configured default. Graph-image retrieval remains under
 investigation; an exact working graph URL is needed to verify that failure.
 
+The subsequent QFD attribute-table screenshots supplied the exact source fields:
+`StationNum`, `Class`, `FMETimestamp`, `URLChart` and `URLPage`. Those fields now
+populate station IDs, source classifications, processing times, graph images
+and source-page links directly. All 111 tests pass. Added source-shape coverage
+retains negative readings and leading-zero station IDs, separates observation
+and processing timestamps, keeps `No Classification` unknown, ignores
+`ClassRank`, and prefers `URLChart` when popup media points at `URLPage`.
+The actual-app synthetic export checks also use this QFD field layout. A live
+chart URL remains necessary to verify image download headers/CORS behaviour;
+the screenshots show link labels rather than the URL values.
+

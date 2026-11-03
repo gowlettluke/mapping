@@ -104,6 +104,24 @@ Gauge inclusion uses the selected snapshot's flood masks rather than entire
 intersecting LGAs. Duplicate station records retain the latest observation;
 distinct stations at the same location remain separate.
 
+The user's attribute-table screenshots confirm these QFD fields (field aliases
+are also supported):
+
+| QFD field | App value |
+| --- | --- |
+| `StationNum` | Station identifier |
+| `Name` | Gauge name |
+| `Height` | Reported height, including valid negative readings |
+| `Class` | Reported flood classification |
+| `Tendency` | Reported trend |
+| `Observation Time` | Observation timestamp |
+| `FMETimestamp` | Layer processing/update timestamp |
+| `URLChart` | Chart image URL, preferred over a popup's page link |
+| `URLPage` | Station source page for report hyperlinks |
+
+`No Classification` remains unknown; it does not mean no flooding. `ClassRank`
+is not used to infer classification, including its observed `-999` value.
+
 Graph links are read from graph/image fields, popup image media or HTML image
 templates. Field substitutions preserve source station IDs, including leading
 zeroes. Legacy HTTP image links use HTTPS on the same host. No BoM image paths,

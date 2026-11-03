@@ -5,15 +5,15 @@ import {maskContains} from './raster.js';
 
 const key=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const names={
-  station:['stationid','stationnumber','stationno','bomstationnumber','bomstationid','bomnumber','stnno','gaugenumber','gaugeid','siteid'],
+  station:['stationnum','stationid','stationnumber','stationno','bomstationnumber','bomstationid','bomnumber','stnno','gaugenumber','gaugeid','siteid'],
   name:['stationname','gaugename','sitename','locationname','stationdescription','name','description','location'],
   height:['riverheight','riverheightm','heightm','waterlevelm','waterlevel','riverlevel','latestheight','latestlevel','height','level'],
-  category:['floodclassification','floodclass','floodcategory','floodstatus','floodlevel','classification','category'],
+  category:['floodclassification','floodclass','floodcategory','floodstatus','floodlevel','class','classification','category'],
   trend:['tendency','rivertrend','heighttrend','trend'],
   observed:['observationtime','observationdatetime','observedat','observedtime','observationdate','readingtime','readingdatetime','timestamp'],
-  updated:['lastupdate','lastupdated','lastupdatedat','updatedat','updatedtime','updatetime','sourceupdated','sourceupdatedat','lastediteddate'],
-  graph:['graphurl','hydrographurl','charturl','riverheightgraph','riverheightgraphurl','graphimageurl','imageurl','graph','hydrograph'],
-  source:['sourceurl','stationurl','bomurl','bomlink','weblink','linkurl']
+  updated:['fmetimestamp','lastupdate','lastupdated','lastupdatedat','updatedat','updatedtime','updatetime','sourceupdated','sourceupdatedat','lastediteddate'],
+  graph:['urlchart','graphurl','hydrographurl','charturl','riverheightgraph','riverheightgraphurl','graphimageurl','imageurl','graph','hydrograph'],
+  source:['urlpage','sourceurl','stationurl','bomurl','bomlink','weblink','linkurl']
 };
 export const GAUGE_COLOURS={major:'#ba2434',moderate:'#e68025',minor:'#e4c745',below:'#157f73',unknown:'#697783'};
 
