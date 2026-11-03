@@ -34,24 +34,29 @@ export function closureLocation(r){const explicit=clean(r.location),match=r.desc
   return !p?'':/^(between|from|near|at)\b/i.test(p)?p[0].toLowerCase()+p.slice(1):'at '+p;
 }
 const countText=count=>`${num(count)} customer${count===1?'':'s'}`;
-export function buildReport({lgas,allLgas,powerCounts,roads=[],trafficAvailable,majorNames=[],majorAvailable=true,asAt,scope,areaLabel='the selected LGAs'}){
+export function buildReport({lgas,allLgas,powerCounts,roads=[],trafficAvailable,majorNames=[],majorAvailable=true,asAt,scope,areaLabel='the selected LGAs',statewide=false}){
   const started=Date.now();let steps=0;const budget=()=>{if((++steps&1023)===0&&Date.now()-started>10000)throw new Error('Report processing exceeded ten seconds');};
   const selected=new Set(lgas.map(lgaName)),all=(allLgas.features||allLgas).map(f=>({name:lgaName(f),geometry:f.geometry,b:bounds(f.geometry)}));
   const membership=g=>all.filter(f=>selected.has(f.name)&&overlap(bounds(g),f.b)&&intersects(g,f.geometry,budget)).map(f=>f.name);
   const sections=[],notes=[],councils=new Map(all.map(f=>[councilKey(f.name),f.name]));
   for(const code of ['energex','ergon']){const name=code==='energex'?'Energex':'Ergon',data=powerCounts?.[code];
     if(!data){notes.push(name+' council outage counts could not be verified as current; its section is omitted.');continue;}
-    if(data.rows.some(row=>!councils.has(councilKey(row.label)))){notes.push(name+' council outage counts could not be matched to Queensland LGAs; its section is omitted.');continue;}
-    const rows=data.rows.map(row=>({...row,label:councils.get(councilKey(row.label))})).filter(row=>selected.has(row.label)&&row.count>0).sort((a,b)=>sort(a.label,b.label));
-    const total=rows.reduce((sum,row)=>sum+row.count,0),summary=rows.length?`Total: ${countText(total)}.`:`No current unplanned outages reported in ${areaLabel}.`;
-    sections.push({heading:'Power outages - '+name,summary,rows:rows.map(row=>({label:row.label,detail:countText(row.count)})),link:LINKS[code],linkLabel:name+' Outage Finder'});
+    const matched=[],unmatched=[];for(const row of data.rows){const label=councils.get(councilKey(row.label));if(row.count>0)(label?matched:unmatched).push({...row,label:label||row.label});}
+    const rows=matched.filter(row=>selected.has(row.label)).sort((a,b)=>sort(a.label,b.label)),unassigned=unmatched.reduce((sum,row)=>sum+row.count,0);
+    let caveat='';if(unassigned){
+      notes.push(name+': '+countText(unassigned)+' could not be matched to a Queensland LGA ('+unmatched.map(row=>row.label).join(', ')+'). '+(statewide?'Included in the statewide total.':'Excluded from warning-area totals.'));
+      if(statewide){const groups=new Map();for(const row of unmatched){const label=/^(unknown|unmatched|unassigned|not specified|not available|n\/?a)$/i.test(clean(row.label))?'LGA not specified':'Unmatched LGA ('+row.label+')';groups.set(label,(groups.get(label)||0)+row.count);}rows.push(...[...groups].sort(([a],[b])=>sort(a,b)).map(([label,count])=>({label,count})));}
+      else caveat=countText(unassigned)+' reported without an identified Queensland LGA; excluded from the warning-area total.';
+    }
+    const total=rows.reduce((sum,row)=>sum+row.count,0),summary=rows.length?`Total: ${countText(total)}.`:unassigned?`Outage counts for ${areaLabel} are incomplete.`:`No current unplanned outages reported in ${areaLabel}.`;
+    sections.push({heading:'Power outages - '+name,summary,rows:rows.map(row=>({label:row.label,detail:countText(row.count)})),caveat,link:LINKS[code],linkLabel:name+' Outage Finder'});
   }
   const major=new Set(majorNames.map(roadKey)),roadGroups=new Map(),roadEvents=new Map();
   for(const r of trafficAvailable&&majorAvailable?roads:[]){if(r.condition!=='closed'||!major.has(roadKey(r.name)))continue;const id=r.id??JSON.stringify([r.geometry,r.name,r.location,r.locality]);if(roadEvents.has(id))roadEvents.get(id).geometries.push(r.geometry);else roadEvents.set(id,{...r,geometries:[r.geometry]});}
   for(const r of roadEvents.values()){const names=[...new Set(r.geometries.flatMap(g=>membership(g)))];const location=closureLocation(r),detail=r.name+' - closed'+(location?' '+location:'');for(const name of names){if(!roadGroups.has(name))roadGroups.set(name,new Set());roadGroups.get(name).add(detail);}}
   if(!trafficAvailable)notes.push('QLDTraffic was unavailable; the roads section is omitted.');else if(!majorAvailable)notes.push('Major-road classification was unavailable; the roads section is omitted.');else sections.push({heading:'Major road closures',summary:roadGroups.size?'':`No current major road closures reported in ${areaLabel}.`,rows:[...roadGroups].sort(([a],[b])=>sort(a,b)).map(([label,items])=>({label,detail:[...items].sort(sort).join('; ')})),link:LINKS.roads,linkLabel:'QLDTraffic'});
   const text=['As at '+asAt+'.',scope];
-  for(const s of sections)text.push('',s.heading,...(s.summary?[s.summary]:[]),...s.rows.map(r=>'- '+r.label+': '+r.detail),'Source: '+s.linkLabel+' - '+s.link);
+  for(const s of sections)text.push('',s.heading,...(s.summary?[s.summary]:[]),...s.rows.map(r=>'- '+r.label+': '+r.detail),...(s.caveat?[s.caveat]:[]),'Source: '+s.linkLabel+' - '+s.link);
   return {text:sections.length?text.join('\n'):'',sections,notes};
 }
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
