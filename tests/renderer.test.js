@@ -4,6 +4,7 @@ import {layoutOutageLabels} from '../js/map-labels.js';
 import {composeProducts} from '../js/renderer.js';
 import {projectedBounds} from '../js/geometry.js';
 import {setCanvasFactory} from '../js/utils.js';
+import {buildReport} from '../js/report.js';
 
 const overlaps=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
 function checkLabels(labels,width,height,reserved=[]){
@@ -24,9 +25,9 @@ test('labels near each corner remain inside the map and clear of the scale bar a
 });
 
 function fakeCanvas(width,height){
-  const images=[],texts=[],ctx={drawImage:(...args)=>images.push(args[0]),fillText:value=>texts.push(String(value)),measureText:value=>({width:String(value).length*9}),createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)})};
-  for(const method of ['save','restore','fillRect','strokeRect','beginPath','closePath','rect','clip','translate','moveTo','lineTo','arc','fill','stroke','strokeText','putImageData'])ctx[method]=()=>{};
-  return {width,height,images,texts,getContext:()=>ctx};
+  const images=[],texts=[],arcs=[],ctx={drawImage:(...args)=>images.push(args[0]),fillText:value=>texts.push(String(value)),measureText:value=>({width:String(value).length*9}),createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),arc:(x,y,r)=>arcs.push({x,y,r,fill:ctx.fillStyle})};
+  for(const method of ['save','restore','fillRect','strokeRect','beginPath','closePath','rect','clip','translate','moveTo','lineTo','fill','stroke','strokeText','putImageData'])ctx[method]=()=>{};
+  return {width,height,images,texts,arcs,getContext:()=>ctx};
 }
 setCanvasFactory(fakeCanvas);
 const collection=features=>({type:'FeatureCollection',features});
@@ -41,10 +42,23 @@ test('storm tracking overlays radar only and remains optional when the radar ima
   }
   const input=fixture();input.tracking=null;assert.equal(composeProducts(input).radar.images.includes(null),false);
 });
-test('outage labels show valid customer counts with thousands separators and omit unknown or planned counts',()=>{
+test('outage labels default to 100 customers and omit smaller, unknown or planned counts',()=>{
   const input=fixture(),outage=(count,extra={})=>({type:'Feature',geometry:{type:'Point',coordinates:[152,-26]},properties:{outage_type:'unplanned',affected_customers:count,...extra}});
-  input.outages=collection([outage(1241),outage(54),outage(null),outage(999,{affected_customers_known:'false'}),outage(888,{outage_type:'planned'})]);
-  const result=composeProducts(input);assert.ok(result.infrastructure.texts.includes('1,241'));assert.ok(result.infrastructure.texts.includes('54'));
-  for(const omitted of ['999','888','null'])assert.equal(result.infrastructure.texts.includes(omitted),false);
+  input.outages=collection([outage(1241),outage(54),outage(100),outage(99),outage(null),outage(999,{affected_customers_known:'false'}),outage(888,{outage_type:'planned'})]);
+  const result=composeProducts(input);assert.ok(result.infrastructure.texts.includes('1,241'));assert.ok(result.infrastructure.texts.includes('100'));
+  for(const omitted of ['54','99','999','888','null'])assert.equal(result.infrastructure.texts.includes(omitted),false);
   assert.equal(result.radar.texts.includes('1,241'),false);
+});
+test('label thresholds are inclusive, configurable and recorded in the infrastructure legend',()=>{
+  const input=fixture(),counts=[54,100,250,500,1000];input.outages=collection(counts.map(count=>({type:'Feature',geometry:{type:'Point',coordinates:[152,-26]},properties:{outage_type:'unplanned',affected_customers:count}})));
+  for(const threshold of [0,100,250,500,1000]){const result=composeProducts({...input,outageLabelMinimum:threshold});for(const count of counts)assert.equal(result.infrastructure.texts.includes(count.toLocaleString('en-AU')),count>=threshold);assert.ok(result.infrastructure.texts.some(text=>text=== (threshold?'Number labels: '+threshold.toLocaleString('en-AU')+'+ customers per outage':'Number labels: all reported counts')));}
+  const all=composeProducts({...input,outageLabelMinimum:'0'});assert.ok(all.infrastructure.texts.includes('54'));
+  for(const invalid of ['',-1,150,NaN])assert.equal(composeProducts({...input,outageLabelMinimum:invalid}).infrastructure.texts.includes('54'),false);
+});
+test('unlabelled small outages remain drawn, unknown counts remain distinct and report totals retain them',()=>{
+  const input=fixture(),outage=(id,count,extra={})=>({type:'Feature',geometry:{type:'Point',coordinates:[152,-26]},properties:{outage_id:id,provider_code:'au.qld.energex',outage_type:'unplanned',affected_customers:count,...extra}});
+  input.outages=collection([outage('small-a',54),outage('small-b',99),outage('unknown',null),outage('unreported',999,{affected_customers_known:false}),outage('planned',888,{outage_type:'planned'})]);
+  const result=composeProducts({...input,outageLabelMinimum:500});assert.equal(result.infrastructure.arcs.length,4);assert.equal(result.infrastructure.arcs[0].fill,result.infrastructure.arcs[1].fill);assert.equal(result.infrastructure.arcs[2].fill,result.infrastructure.arcs[3].fill);assert.notEqual(result.infrastructure.arcs[0].fill,result.infrastructure.arcs[2].fill);assert.equal(result.infrastructure.texts.includes('54'),false);
+  const lga={type:'Feature',properties:{lga:'Test Regional'},geometry:{type:'Polygon',coordinates:[[[150,-28],[154,-28],[154,-24],[150,-24],[150,-28]]]}};
+  const report=buildReport({lgas:[lga],allLgas:collection([lga]),outages:input.outages,powerState:{energex:true,ergon:true},trafficAvailable:true,asAt:'Test snapshot',scope:'Selected LGAs'});assert.match(report.text,/153 customers, plus 2 outages with unreported customer counts/);assert.doesNotMatch(report.text,/888|999/);
 });

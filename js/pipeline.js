@@ -20,7 +20,7 @@ export async function scanFloods(connection,signal,onProgress=()=>{}){
     });output.push(...groups.values());
   }return output;
 }
-export async function generateSnapshot({connection,profile='thunderstorm',selection=null,tracking=false,signal,onProgress=()=>{}}){
+export async function generateSnapshot({connection,profile='thunderstorm',selection=null,tracking=false,outageLabelMinimum,signal,onProgress=()=>{}}){
   const spec=CONFIG.profiles[profile],{width,height,detection,minimumRegionalKm,padding}=CONFIG.rendering,floodSelection=profile==='flooding'?selection:null;
   onProgress('Loading Queensland LGA polygons...');const boundary=await lgas(signal);let active,extent,scopeMasks;
   if(floodSelection){active=true;extent=fitExtent(floodSelection.extent,width,height,{minimumKm:minimumRegionalKm,padding});scopeMasks=floodSelection.components.map(c=>c.mask);}
@@ -42,7 +42,7 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
   let trackingImage=null;if(tracking&&active&&spec.tracking.length){try{trackingImage=await connection.render('warning',extent,width,height,spec.tracking,[],signal);}catch{notices.push('Storm tracking was unavailable; it was omitted.');}}
   const affected=active?warningLgas(boundary,scopeMasks):boundary.features;if(active&&!affected.length)throw new Error('No Queensland LGA intersection could be verified for this warning');
   const generated=new Date(),roads=normaliseRoads(context.traffic,generated.getTime());
-  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,
+  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,outageLabelMinimum,
     scopeLabel:active?(floodSelection?.title||affected.slice(0,3).map(lgaName).join(' / ')+(affected.length>3?' and surrounds':'')):'No active warning detected in Queensland'};
   const products=composeProducts({...snapshot,outages:context.outages});const blobs=await exportProducts(products);radar.close?.();trackingImage?.close?.();
   return {snapshot,products,blobs,notices};
