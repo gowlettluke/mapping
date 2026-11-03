@@ -120,3 +120,21 @@ type. Missing legends must be labelled unavailable rather than replaced by a
 guessed key. No background or infrastructure-style redesign is part of this
 revision.
 
+## Unmatched provider council rows
+
+All 96 tests and source/asset checks pass. A provider row with an unmatched
+council no longer suppresses the entire power section. Recognised warning-LGA
+totals remain visible; unassigned customers are excluded from those totals and
+explained in copied report text. A selection without matched impacts stays
+explicitly incomplete when positive unassigned counts exist. Statewide reports
+include those customers in separate rows, preserving the provider total.
+
+The captured 3 November 2026 production snapshot contained 4,486 Ergon customers
+in matched LGAs plus two under `Unknown`. The source text view independently
+confirmed that unknown allocation. Integration with the captured manifest now
+produces a 4,488-customer statewide total with a separate two-customer row, and
+a Central Highlands warning-LGA total of 2,267 with the unassigned count clearly
+excluded. These are dated regression observations, not permanent expected
+outage counts. Freshness, reconciliation, duplicate detection and source
+failure checks retain their existing behaviour.
+

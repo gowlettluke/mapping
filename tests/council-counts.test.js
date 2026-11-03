@@ -34,3 +34,21 @@ test('Ergon provider split produces one row per warning LGA and the selected tot
   const selected=buildReport({...common,lgas:lgas.slice(0,2)});assert.match(selected.text,/Total: 1,008 customers/);assert.match(selected.text,/South Burnett Regional: 1,007 customers/);assert.match(selected.text,/North Burnett Regional: 1 customer/);assert.doesNotMatch(selected.text,/Western Downs|combined|\*/);
   assert.match(buildReport({...common,lgas}).text,/Total: 1,009 customers/);
 });
+test('one unknown council retains matched warning-LGA totals and carries the exclusion into copied text',()=>{
+  const lgas=['Central Highlands Regional','Western Downs Regional'].map(lga=>({type:'Feature',properties:{lga},geometry:null}));
+  const common={lgas:[lgas[0]],allLgas:{features:lgas},powerCounts:{energex:{rows:[]},ergon:{rows:[{label:'Central Highlands Regional',count:2267},{label:'Western Downs Regional',count:46},{label:'Unknown',count:2}]}},trafficAvailable:true,asAt:'Test snapshot',scope:'Warning LGAs',areaLabel:'the LGAs affected by this warning'};
+  const result=buildReport(common),section=result.sections.find(s=>s.heading==='Power outages - Ergon');
+  assert.equal(section.summary,'Total: 2,267 customers.');assert.deepEqual(section.rows,[{label:'Central Highlands Regional',detail:'2,267 customers'}]);assert.match(result.text,/2 customers reported without an identified Queensland LGA; excluded from the warning-area total/);assert.doesNotMatch(result.text,/Western Downs Regional|2,269|omitted/);assert.match(result.notes.join(' '),/Unknown/);
+  const noMatched=buildReport({...common,lgas:[lgas[1]],powerCounts:{energex:{rows:[]},ergon:{rows:[{label:'Central Highlands Regional',count:2267},{label:'Unknown',count:2}]}}});
+  const unknownSection=noMatched.sections.find(s=>s.heading==='Power outages - Ergon');assert.match(unknownSection.summary,/counts .* incomplete/);assert.doesNotMatch(unknownSection.summary,/No current unplanned outages/);assert.match(unknownSection.caveat,/2 customers/);
+});
+test('statewide reports reconcile the provider total while displaying unassigned customers separately',()=>{
+  const lga={type:'Feature',properties:{lga:'Central Highlands Regional'},geometry:null};
+  const result=buildReport({lgas:[lga],allLgas:{features:[lga]},powerCounts:{energex:{rows:[]},ergon:{rows:[{label:'Central Highlands Regional',count:2267},{label:'Unknown',count:2},{label:'Unassigned',count:1},{label:'New council name',count:4}]}},trafficAvailable:true,asAt:'Test snapshot',scope:'Queensland',areaLabel:'Queensland',statewide:true});
+  const section=result.sections.find(s=>s.heading==='Power outages - Ergon');assert.equal(section.summary,'Total: 2,274 customers.');assert.deepEqual(section.rows,[{label:'Central Highlands Regional',detail:'2,267 customers'},{label:'LGA not specified',detail:'3 customers'},{label:'Unmatched LGA (New council name)',detail:'4 customers'}]);assert.equal(section.caveat,'');assert.match(result.notes.join(' '),/Included in the statewide total/);
+});
+test('a zero-customer unknown council does not suppress a verified empty section',()=>{
+  const lga={type:'Feature',properties:{lga:'Central Highlands Regional'},geometry:null};
+  const result=buildReport({lgas:[lga],allLgas:{features:[lga]},powerCounts:{energex:{rows:[]},ergon:{rows:[{label:'Unknown',count:0}]}},trafficAvailable:true,asAt:'Test snapshot',scope:'Warning LGAs'});
+  const section=result.sections.find(s=>s.heading==='Power outages - Ergon');assert.match(section.summary,/No current unplanned outages reported/);assert.equal(section.caveat,'');assert.deepEqual(result.notes,[]);
+});

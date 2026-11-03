@@ -68,6 +68,6 @@ export async function snapshotReport(snapshot,signal){const {context,active,affe
   let names=[],majorAvailable=true;
   if(snapshot.demo)names=snapshot.demoMajorNames||[];else if(snapshot.roads.some(r=>r.condition==='closed'))try{names=await majorNames(signal);}catch{majorAvailable=false;}
   checkAbort(signal);const selected=active?affected:lgas.features;
-  return buildReport({lgas:selected,allLgas:lgas,powerCounts:providerCouncils(context.manifest,generated.getTime()),roads:snapshot.roads,trafficAvailable:context.traffic?.type==='FeatureCollection',majorNames:names,majorAvailable,asAt:aest(generated),areaLabel:active?'the LGAs affected by this warning':'Queensland',
+  return buildReport({lgas:selected,allLgas:lgas,powerCounts:providerCouncils(context.manifest,generated.getTime()),roads:snapshot.roads,trafficAvailable:context.traffic?.type==='FeatureCollection',majorNames:names,majorAvailable,asAt:aest(generated),areaLabel:active?'the LGAs affected by this warning':'Queensland',statewide:!active,
     scope:active?'Unplanned outages and major road closures in warning LGAs; impacts may extend beyond the warning area.':'Queensland-wide unplanned outages and major road closures; no active warning detected.'});
 }
