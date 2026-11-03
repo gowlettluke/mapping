@@ -61,7 +61,7 @@ export async function checkLayerConnections(connection,{warningId,radarId,signal
     {id:'trafficCameras',run:async s=>{try{normaliseCameras(await json(src.trafficCameras,{signal:s,timeout:12000}),'tmr','TMR');return 'Camera list connected; photographs load on request';}catch(error){checkAbort(s);await countLayer(src.cameraFallback,s);return 'Fallback camera list connected; photographs load on request';}}},
     ...CONFIG.arcgis.cameras.map(spec=>({id:'camera-'+spec.key,run:async s=>{const cameras=await connection.probeFeature(spec,s),views=normaliseCameras(cameras,spec.key,spec.label);if(cameras.features.length&&!views.length)throw new Error('Camera source returned no usable image links and point locations.');return 'Camera list connected · '+views.length+' image views; photos load on request';}})),
     {id:'districts',run:async s=>{await connection.probeFeature(CONFIG.arcgis.districts,s);return 'Authenticated district layer connected';}},
-    {id:'gauges',run:async s=>{const gauges=normaliseGauges(await connection.gaugeCollection(s));return 'Gauge list connected · '+gauges.length+' stations; graphs load on request';}},
+    {id:'gauges',timeout:60000,run:async s=>{const gauges=normaliseGauges(await connection.gaugeCollection(s));return 'Gauge list connected · '+gauges.length+' stations; graphs load on request';}},
     ...['floodWarnings','floodWatches'].map(key=>({id:key,run:async s=>{const result=await floodReference(key,s);return result.mode==='bundled'?'Bundled BoM catchment reference boundaries · '+new Date(result.retrievedAt).toLocaleDateString('en-AU',{timeZone:'Australia/Brisbane'}):'Current BoM catchment reference boundaries connected';}}))
   ];
   return executeChecks(jobs,{signal,onUpdate});

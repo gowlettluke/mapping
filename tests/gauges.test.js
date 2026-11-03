@@ -21,10 +21,28 @@ test('manual gauge source choices override the configured default and replace it
   assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
   const other='abcdef0123456789abcdef0123456789';connection.setFeatureSelection(CONFIG.arcgis.gauges,other);assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,other);
 });
-test('an unavailable configured gauge item retains the manual-source control and sign-out restores the default',async()=>{
+test('an unavailable configured gauge item retains the source control and sign-out clears session overrides',async()=>{
   const connection=new ArcGISConnection();let fail=true;connection.sdk={identity:{destroyCredentials(){}},PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){if(fail)throw new Error('Not shared with this account');}}};
   await assert.rejects(connection.featureItem(CONFIG.arcgis.gauges));assert.ok('gauges' in connection.featureChoices);connection.featureSelections.set('gauges','abcdef0123456789abcdef0123456789');connection.disconnect();fail=false;
   assert.equal((await connection.featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+});
+test('the configured gauge feed retries its first startup failure without manual ID entry',async()=>{
+  const connection=new ArcGISConnection(),ids=[],requests=[];connection.portal={url:'https://organisation.maps.arcgis.com'};
+  connection.search=async()=>{throw new Error('No title search or user selection is needed');};
+  connection.sdk={PortalItem:class{constructor({id}){ids.push(id);this.id=id;this.type='Feature Service';this.url='https://services.example/FeatureServer';}async load(){if(ids.length===1)throw new Error('Temporary initial-session failure');}},esriRequest:async(url)=>{requests.push(url);return {data:url.includes('/query')?collection([feature(sample)]):{geometryType:'esriGeometryPoint',fields:[{name:'station_name'}]}};}};
+  const result=await connection.gaugeCollection();assert.equal(result.collection.features.length,1);assert.deepEqual(ids,[CONFIG.arcgis.gauges.itemId,CONFIG.arcgis.gauges.itemId]);assert.equal(connection.featureSelections.get('gauges'),CONFIG.arcgis.gauges.itemId);assert.equal(requests.length,2);
+});
+test('a saved gauge choice is restored per organisation and invalid saved IDs cannot replace the default',async()=>{
+  const previous=globalThis.localStorage,storage=new Map(),id='abcdef0123456789abcdef0123456789',portal={url:'https://organisation.maps.arcgis.com'};
+  globalThis.localStorage={getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)};
+  const make=url=>{const connection=new ArcGISConnection();connection.portal={url};connection.sdk={PortalItem:class{constructor({id}){this.id=id;this.type='Feature Service';}async load(){}}};return connection;};
+  try{const first=make(portal.url);first.setFeatureSelection(CONFIG.arcgis.gauges,id);const restored=make(portal.url);assert.equal((await restored.featureItem(CONFIG.arcgis.gauges)).id,id);assert.equal((await make('https://other.maps.arcgis.com').featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+    storage.set('qldMapping.gaugeItem.'+portal.url,'not-an-item-id');assert.equal((await make(portal.url).featureItem(CONFIG.arcgis.gauges)).id,CONFIG.arcgis.gauges.itemId);
+  }finally{if(previous===undefined)delete globalThis.localStorage;else globalThis.localStorage=previous;}
+});
+test('cancelling a failed gauge startup prevents the automatic retry',async()=>{
+  const connection=new ArcGISConnection(),controller=new AbortController();let calls=0;connection.readGaugeCollection=async()=>{calls++;controller.abort();throw new Error('Stopped');};
+  await assert.rejects(connection.gaugeCollection(controller.signal),{name:'AbortError'});assert.equal(calls,1);
 });
 test('gauge records preserve station IDs, source classification and separate observation/update times',()=>{
   const gauge=normalise();assert.equal(gauge.stationId,'0538001');assert.equal(gauge.height,3.15);assert.equal(gauge.category,'minor');assert.equal(gauge.trend,'Steady');assert.equal(+gauge.observedAt,now-30*60000);assert.equal(+gauge.updatedAt,now-5*60000);assert.equal(gauge.graphUrl,'');
@@ -94,17 +112,26 @@ test('graph retrieval preserves missing/failed stations, defers requests and use
   }finally{globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
 });
 test('combined flood PDF page targets handle gauges only, cameras only and multi-page reports',()=>{
-  for(const [gauges,photos]of [[1,0],[0,1],[11,25],[101,49]]){const plan=floodPdfPlan(gauges,photos),targets=[];if(gauges){targets.push(plan.gaugeOverview,plan.gaugeSummary,plan.gaugeGraphs);assert.ok(plan.gaugeGraphs+Math.floor((gauges-1)/2)<=plan.total);}if(photos){targets.push(plan.cameraOverview,plan.cameraIndex,plan.cameraPhotos);assert.ok(plan.cameraPhotos+Math.floor((photos-1)/6)<=plan.total);}assert.ok(targets.every(target=>target>=1&&target<=plan.total));assert.equal(new Set(targets).size,targets.length);}
-  assert.throws(()=>floodPdfPlan(0,0),/No gauges/);assert.equal(floodPdfPlan(1,0).total,3);assert.equal(floodPdfPlan(0,1).total,3);assert.equal(floodPdfPlan(11,25).total,17);
+  for(const [gauges,photos]of [[1,0],[0,1],[11,25],[101,49]]){const plan=floodPdfPlan(gauges,photos),targets=[];if(gauges){targets.push(plan.gaugeOverview,plan.gaugeSummary,plan.gaugeGraphs);assert.ok(plan.gaugeGraphs+Math.floor((gauges-1)/4)<=plan.total);}if(photos){targets.push(plan.cameraOverview,plan.cameraIndex,plan.cameraPhotos);assert.ok(plan.cameraPhotos+Math.floor((photos-1)/6)<=plan.total);}assert.ok(targets.every(target=>target>=1&&target<=plan.total));assert.equal(new Set(targets).size,targets.length);}
+  assert.throws(()=>floodPdfPlan(0,0),/No gauges/);assert.equal(floodPdfPlan(1,0).total,3);assert.equal(floodPdfPlan(0,1).total,3);assert.equal(floodPdfPlan(11,25).total,13);
 });
 test('gauge-only PDF retains readings when graphs are missing and never embeds credential-bearing links',()=>{
   const texts=[],links=[];class PDF{addPage(){}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){texts.push(String(value));}link(x,y,w,h,target){links.push(target);}splitTextToSize(value){return [value];}addImage(){}}
   const gauge={...normalise(),label:'G1',sourceUrl:'https://graphs.example/source?token=SECRET'},snapshot={generated:new Date(now),scopeLabel:'Synthetic flood area'};
   const result=floodReportPdf({jsPDF:PDF,snapshot,gauges:[gauge],graphs:[],gaugeOverview:{data:'synthetic',width:100,height:100}});assert.ok(result);assert.ok(texts.some(text=>text.includes('3.15')));assert.ok(texts.some(text=>text.includes('Graph unavailable')));assert.equal(links.some(link=>link.url),false);assert.ok(links.every(link=>link.pageNumber>=1&&link.pageNumber<=3));
 });
-test('real BoM chart proportions get full-width pages and correctly linked individual graph targets',()=>{
-  const pages=[],links=[],images=[];let page=0;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){pages.push({page,text:String(value)});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(data,type,x,y,width,height){images.push({page,width,height});}}
-  const gauges=[{...normalise(),label:'G1'},{...normalise({...sample,station_id:'different',station_name:'Another station'}),label:'G2'}],graphs=gauges.map(gauge=>({gauge,graph:{data:'synthetic image',width:800,height:400,retrievedAt:new Date(now)}}));
-  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,graphs,gaugeOverview:{data:'synthetic overview',width:100,height:100}});assert.equal(page+1,4);assert.equal(images.filter(image=>image.page>=2).length,2);assert.ok(images.filter(image=>image.page>=2).every(image=>image.width>260&&image.height>130));assert.ok(links.some(link=>link.page===1&&link.pageNumber===4));assert.ok(links.every(link=>!link.pageNumber||link.pageNumber<=4));
-  assert.equal(floodPdfPlan(2,0,{graphsPerPage:1}).gaugeGraphPages,2);assert.throws(()=>floodPdfPlan(2,0,{graphsPerPage:3}),/Unsupported/);
+test('real BoM charts share four-panel pages with correct index targets and no overlapping image bounds',()=>{
+  const pages=[],links=[],images=[];let page=0;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){pages.push({page,text:String(value)});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(data,type,x,y,width,height){images.push({page,x,y,width,height});}}
+  const gauges=Array.from({length:7},(_,i)=>({...normalise({...sample,station_id:String(i),station_name:'Station '+i}),label:'G'+(i+1)})),graphs=gauges.map(gauge=>({gauge,graph:{data:'synthetic image',width:800,height:400,retrievedAt:new Date(now)}}));
+  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,graphs,gaugeOverview:{data:'synthetic overview',width:100,height:100}});assert.equal(page+1,4);assert.equal(images.filter(image=>image.page===2).length,4);assert.equal(images.filter(image=>image.page===3).length,3);assert.ok(images.filter(image=>image.page>=2).every(image=>image.width>120&&image.width<132&&image.height>60&&image.height<66));assert.ok(links.some(link=>link.page===1&&link.pageNumber===4));assert.ok(links.every(link=>!link.pageNumber||link.pageNumber<=4));
+  assert.equal(floodPdfPlan(7,0,{graphsPerPage:6}).gaugeGraphPages,2);assert.throws(()=>floodPdfPlan(2,0,{graphsPerPage:1}),/Unsupported/);
+  for(const [i,a]of images.entries())for(const b of images.slice(i+1))if(a.page===b.page)assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
+});
+test('the compact gauge table paginates twenty rows and colours reported major, moderate and minor readings',()=>{
+  const texts=[],links=[];let page=0,colour;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(...value){colour=value;}setDrawColor(){}line(){}rect(){}text(value){texts.push({page,text:String(value),colour});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(){}}
+  const categories=['Major','Moderate','Minor','No Classification','Below minor'],gauges=Array.from({length:21},(_,i)=>({...normalise({...sample,station_id:String(i),station_name:'Station '+i,flood_classification:categories[i%5]}),label:'G'+(i+1)}));
+  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,gaugeOverview:{data:'synthetic overview',width:100,height:100}});
+  assert.equal(floodPdfPlan(21,0).gaugeSummaryPages,2);assert.equal(texts.filter(entry=>entry.page===1&&/^Station /.test(entry.text)).length,20);assert.equal(texts.filter(entry=>entry.page===2&&/^Station /.test(entry.text)).length,1);
+  const table=texts.filter(entry=>[1,2].includes(entry.page));for(const header of ['Level (m)','Classification','Trend','Observed (AEST)'])assert.ok(table.some(entry=>entry.text===header));
+  const row=name=>table.find(entry=>entry.text.startsWith(name+' ['));assert.deepEqual(row('Station 0').colour,[177,32,47]);assert.deepEqual(row('Station 1').colour,[148,111,0]);assert.deepEqual(row('Station 2').colour,[26,114,69]);assert.deepEqual(row('Station 3').colour,row('Station 4').colour);assert.ok(!table.some(entry=>/Feed updated:|Observation over/.test(entry.text)));assert.ok(links.some(link=>link.page===2&&link.pageNumber===9));
 });
