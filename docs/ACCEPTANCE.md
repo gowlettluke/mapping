@@ -322,3 +322,30 @@ The selector now uses current BoM catchment records grouped by the published war
 All 166 tests and 45 JavaScript syntax/asset checks pass. New unit checks cover combined disconnected catchments, similarly named rivers belonging to different warnings, latest-issue replacement, local expiry, cancellations, complete membership, source freshness/failure, watch grouping and abort handling. A fresh public-service query returned 21 Queensland catchment records and 14 warning groups, corresponding to the current BoM warning products. No live records are committed.
 
 Native-canvas integration verifies both JPEGs for combined selections, gauges in both catchments, adjacent-warning exclusion, independent warning/watch rendering, rejection of partial maps and changed notices, confirmed empty statewide output, disagreement between an empty list and an active WMS, and cancellation. Actual app event handlers were exercised with a synthetic DOM/services for the selector, catchment summary, source link, deselection guard and map/report generation. These checks do not access the private WMS; after deployment compare a combined warning and its gauges/cameras with the signed-in production services.
+
+
+## Separate PDF exports and neighbouring warning context — 4 November 2026
+
+All 178 tests and JavaScript/asset checks pass. The actual application handlers
+verify separate camera/gauge filenames and document contents, image-request
+isolation, independent availability when the other source fails or is pending,
+missing gauge graphs, stale camera photos, cancellation on a changed selection,
+and the existing thunderstorm/severe-weather camera paths. Both entry pages
+replace the combined-report checkboxes with a button in each source panel.
+
+Flood analysis still intersects the selected notice's complete catchment set.
+The display keeps the full source warning raster and its native names within
+the same regional extent. Neighbouring notices remain visible and labelled, but
+cannot satisfy missing selected catchments or add cameras/gauges to the report.
+A white-backed navy dashed geometry outline marks only the selected notice on
+both JPEGs and the camera/gauge overview maps; its key distinguishes selection
+from the source's unchanged warning colours.
+
+The browser's synthetic demo generated each report independently. A native-
+canvas render through the production PDF modules produced a three-page camera
+document and a four-page gauge document including its flow diagram, index and
+four-graph page. Rendered pages and the neighbouring-warning map were inspected.
+All 54 internal/external links have valid destinations and omit credentials;
+text stays inside page bounds and camera/gauge sections remain in separate
+documents. These fixtures use synthetic observations. The private live WMS,
+camera permissions and gauge feed still require a signed-in deployment check.

@@ -6,7 +6,7 @@ import {markerPositions} from './cameras.js';
 import {customers} from './report.js';
 import {layoutOutageLabels} from './map-labels.js';
 import {OUTAGE_BANDS,UNKNOWN_OUTAGE,outageAppearance,normaliseLabelMinimum} from './outage-style.js';
-import {floodLegendLayout} from './flood-display.js';
+import {floodLegendLayout,drawWarningFocus,warningFocusLegend} from './flood-display.js';
 const CREDIT_FALLBACK='Esri, HERE, Garmin, Intermap, USGS, OpenStreetMap contributors and the GIS User Community';
 export function wrap(ctx,text,width){const result=[];let line='';for(const word of String(text).split(/\s+/)){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>width){result.push(line);line=word;}else line=candidate;}if(line)result.push(line);return result;}
 export async function basemap(extent,width,height,signal){
@@ -59,7 +59,7 @@ function legend(ctx,width,y,radar,labelMinimum,floodKind){ctx.fillStyle='#333';c
     ctx.strokeStyle='#bd202d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(16,y+83);ctx.lineTo(51,y+83);ctx.stroke();ctx.fillStyle='#333';ctx.fillText('Road closed',60,y+87);ctx.strokeStyle='#c47b19';ctx.beginPath();ctx.moveTo(240,y+83);ctx.lineTo(275,y+83);ctx.stroke();ctx.fillText('Road restricted / conditional access',284,y+87);ctx.fillStyle='#58636c';ctx.fillText(labelMinimum?'Number labels: '+labelMinimum.toLocaleString('en-AU')+'+ customers per outage':'Number labels: all reported counts',650,y+87);
   }
 }
-export function composeProducts({extent,background,warning,radar,tracking=null,mask,lgas,context,outages,roads,profile,active,generated,scopeLabel='',demo=false,outageLabelMinimum,floodDisplay=null}){
+export function composeProducts({extent,background,warning,radar,tracking=null,mask,lgas,context,outages,roads,profile,active,generated,scopeLabel='',demo=false,outageLabelMinimum,floodDisplay=null,floodNotice=null}){
   const width=warning.width,height=warning.height,p=transform(extent,width,height),flood=profile==='flooding',outline=flood?canvas(width,height):outlineCanvas(mask),probe=canvas(width,10).getContext('2d'),labelMinimum=normaliseLabelMinimum(outageLabelMinimum);probe.font='11px Arial';
   const floodKind=flood?(floodDisplay?.kind||'Flood Warning / Watch'):null,floodLegend=active&&flood?floodLegendLayout(floodDisplay?.legend,width):{height:0};
   const footer=['Generated '+aest(generated),demo?'Sources: synthetic test fixtures - not operational observations.':'Sources: Bureau of Meteorology warning/radar via authenticated ArcGIS; Queensland Government boundaries; Queensland power outage feed; QLDTraffic.',demo?'Background: synthetic demo geometry.':context.basemapUnavailable?'Background: Queensland boundary context.':'Basemap: '+(context.credits?.copyrightText||CREDIT_FALLBACK)];
@@ -79,15 +79,20 @@ export function composeProducts({extent,background,warning,radar,tracking=null,m
       for(const r of roads){ctx.beginPath();path(ctx,r.geometry,p);ctx.strokeStyle=r.condition==='closed'?'#bd202d':'#c47b19';ctx.lineWidth=r.condition==='closed'?3:2.5;const point=r.geometry.type==='Point';if(point){const pos=p(r.geometry.coordinates);ctx.arc(...pos,5,0,Math.PI*2);}ctx.stroke();}
       outageLabels(ctx,counts,extent,width,height,context.locator,flood?floodDisplay?.labelBoxes:[]);
     }
+    if(flood)drawWarningFocus(ctx,{extent,active,floodNotice},width,height);
     if(flood&&floodDisplay?.labels)ctx.drawImage(floodDisplay.labels,0,0);
     annotations(ctx,extent,width,height,context.locator);if(demo){ctx.font='bold 38px Arial';ctx.fillStyle='rgba(145,25,35,.8)';ctx.textAlign='center';ctx.fillText('DEMO - SYNTHETIC DATA',width/2,60);ctx.textAlign='left';}ctx.strokeStyle='#61717b';ctx.lineWidth=1;ctx.strokeRect(.5,.5,width-1,height-1);ctx.restore();
     if(floodLegend.height){ctx.fillStyle='#333';ctx.font='bold 12px Arial';ctx.fillText(floodKind+' — '+(floodDisplay?.legend?'source legend':'source legend unavailable'),16,top+height+20);if(floodDisplay?.legend)ctx.drawImage(floodDisplay.legend,16,top+height+27,floodLegend.width,floodLegend.imageHeight);}
-    legend(ctx,width,top+height+floodLegend.height,withRadar,labelMinimum,floodKind);ctx.font='11px Arial';ctx.fillStyle='#4d5962';footerLines.forEach((s,i)=>ctx.fillText(s,15,top+height+legendH+17+i*16));return c;
+    const legendY=top+height+floodLegend.height;legend(ctx,width,legendY,withRadar,labelMinimum,floodKind);
+    if(active&&floodNotice?.scopeGeometries?.length){ctx.fillStyle='#fff';ctx.fillRect(12,legendY+8,235,27);warningFocusLegend(ctx,16,legendY+20,floodKind);}
+    ctx.font='11px Arial';ctx.fillStyle='#4d5962';footerLines.forEach((s,i)=>ctx.fillText(s,15,top+height+legendH+17+i*16));return c;
   };
   return {radar:make(true),infrastructure:make(false),outline};
 }
 export async function exportProducts(products){return {radar:await canvasBlob(products.radar),infrastructure:await canvasBlob(products.infrastructure)};}
 export function cameraMap(snapshot,cameras,width=1450,height=Math.round(width*(snapshot.extent[3]-snapshot.extent[1])/(snapshot.extent[2]-snapshot.extent[0]))){const c=canvas(width,height),ctx=c.getContext('2d');ctx.drawImage(snapshot.background,0,0,width,height);ctx.save();ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();ctx.globalAlpha=.8;ctx.drawImage(snapshot.warning,0,0,width,height);ctx.globalAlpha=1;
+  if(snapshot.floodDisplay?.labels)ctx.drawImage(snapshot.floodDisplay.labels,0,0,width,height);
+  if(drawWarningFocus(ctx,snapshot,width,height)){ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(12,12,220,32);warningFocusLegend(ctx,23,28,snapshot.floodDisplay?.kind);}
   const p=transform(snapshot.extent,width,height);ctx.font='bold 16px Arial';ctx.textAlign='center';const positions=markerPositions(cameras.map(c=>p(c.point)),width,height);
   cameras.forEach((camera,i)=>{const [ax,ay]=p(camera.point),[x,y]=positions[i];ctx.strokeStyle='#6a7b86';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,13,0,Math.PI*2);ctx.fillStyle='#1c4c72';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.fillText(String(i+1),x,y+5);camera.marker={x,y};});
   ctx.textAlign='left';annotations(ctx,snapshot.extent,width,height,snapshot.context.locator);ctx.restore();return c;

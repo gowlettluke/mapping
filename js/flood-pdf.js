@@ -9,6 +9,10 @@ const ascii=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/
 const gaugeRows=20,gaugeTextColours={major:[177,32,47],moderate:[148,111,0],minor:[26,114,69]};
 const gaugeColour=gauge=>gaugeTextColours[gauge.category]||[45,56,65];
 const shortTime=date=>date?aest(date).replace(/ AEST$/,''):'Not supplied';
+export function gaugeReportPdf({jsPDF,snapshot,gauges=[],graphs=[],gaugeOverview=null,flowDiagrams=[],notes=[],signal,graphsPerPage=4}){
+  if(!gauges.length)throw new Error('No river gauges are available for this report.');
+  return floodReportPdf({jsPDF,snapshot,gauges,graphs,gaugeOverview,flowDiagrams,notes,signal,graphsPerPage});
+}
 export function floodPdfPlan(gaugeCount,photoCount,{graphsPerPage=4,flowDiagramPages=0}={}){
   if(!Number.isInteger(gaugeCount)||gaugeCount<0||!Number.isInteger(photoCount)||photoCount<0||gaugeCount+photoCount===0)throw new Error('No gauges or eligible camera photographs are available for this report.');
   if(![4,6].includes(graphsPerPage))throw new Error('Unsupported graph page layout.');

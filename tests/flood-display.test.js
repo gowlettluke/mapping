@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {floodLabelBoxes,floodLegendLayout} from '../js/flood-display.js';
+import {floodLabelBoxes,floodLegendLayout,drawWarningFocus,warningFocusLegend} from '../js/flood-display.js';
 import {layoutOutageLabels} from '../js/map-labels.js';
+import {projectedBounds} from '../js/geometry.js';
+
+test('the focus outline traces only selected notice geometry and identifies the selected warning/watch',()=>{
+  const strokes=[],labels=[];let points=[],dash=[];const ctx={save(){},restore(){},beginPath(){points=[];},closePath(){},moveTo:(...point)=>points.push(point),lineTo:(...point)=>points.push(point),setLineDash:value=>{dash=value;},stroke(){strokes.push({points:[...points],colour:this.strokeStyle,width:this.lineWidth,dash});},fillText:value=>labels.push(value)},geometry={type:'Polygon',coordinates:[[[150,-28],[151,-28],[151,-27],[150,-27],[150,-28]]]},snapshot={active:true,extent:projectedBounds([150,-28,154,-24]),floodNotice:{scopeGeometries:[geometry]}};
+  assert.equal(drawWarningFocus(ctx,snapshot,1000,800),true);assert.equal(strokes.length,2);assert.equal(strokes[1].colour,'#173f63');assert.equal(strokes[1].width,3);assert.deepEqual(strokes[1].dash,[12,7]);assert.ok(strokes.every(stroke=>stroke.points.every(([x])=>x<=251)),'A warning farther east receives no selection outline.');
+  warningFocusLegend(ctx,10,20,'Flood Warning');warningFocusLegend(ctx,10,40,'Flood Watch');assert.deepEqual(labels,['Selected warning','Selected watch']);const count=strokes.length;assert.equal(drawWarningFocus(ctx,{...snapshot,active:false},1000,800),false);assert.equal(drawWarningFocus(ctx,{...snapshot,floodNotice:null},1000,800),false);assert.equal(strokes.length,count);
+});
 
 test('native flood name footprints preserve separate names and keep outage labels clear',()=>{
   const w=600,h=400,pixels=new Uint8ClampedArray(w*h*4),ink=(x0,y0,x1,y1)=>{for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)pixels[(y*w+x)*4+3]=255;};

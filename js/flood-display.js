@@ -2,6 +2,20 @@ import {canvas,clean} from './utils.js';
 import {bounds,overlap,projectedBounds,path,transform} from './geometry.js';
 
 const intersects=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
+export function drawWarningFocus(ctx,snapshot,width,height){
+  const geometries=snapshot.floodNotice?.scopeGeometries;if(!snapshot.active||!geometries?.length)return false;
+  const project=transform(snapshot.extent,width,height);ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  // Trace the notice geometry, not its coloured/hatch pixels. Native warning
+  // colours stay intact and unrelated warning areas get no focus outline.
+  for(const [colour,lineWidth,dash]of [['rgba(255,255,255,.96)',7,[]],['#173f63',3,[12,7]]]){
+    ctx.strokeStyle=colour;ctx.lineWidth=lineWidth;ctx.setLineDash(dash);
+    for(const geometry of geometries){ctx.beginPath();path(ctx,geometry,project);ctx.stroke();}
+  }ctx.restore();return true;
+}
+export function warningFocusLegend(ctx,x,y,kind='Flood Warning'){
+  ctx.save();ctx.lineWidth=7;ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+28,y);ctx.stroke();
+  ctx.strokeStyle='#173f63';ctx.lineWidth=3;ctx.setLineDash([12,7]);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#333';ctx.font='12px Arial';ctx.textAlign='left';ctx.fillText(kind==='Flood Watch'?'Selected watch':'Selected warning',x+37,y+4);ctx.restore();
+}
 export function mapReservations(width,height,locator){const boxes=[{x:12,y:height-57,width:220,height:45}];if(locator?.features?.length)boxes.push({x:width-153,y:12,width:141,height:182});return boxes;}
 
 // Native labels are separate from warning detection. Group small pixel tiles

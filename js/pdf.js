@@ -12,9 +12,9 @@ export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
   const ix=9,iy=26,iw=235,ih=158,ratio=Math.min(iw/overview.width,ih/overview.height),dw=overview.width*ratio,dh=overview.height*ratio;
   doc.addImage(overview.data,'JPEG',ix,iy,dw,dh);
   photos.forEach((entry,i)=>{const m=entry.camera.marker;if(m)doc.link(ix+m.x/overview.width*dw-2.5,iy+m.y/overview.height*dh-2.5,5,5,{pageNumber:pageFor(i)});});
-  doc.setFontSize(9);doc.setTextColor(30,47,60);doc.text(ascii(snapshot.profileLabel+' warning area'),250,30,{maxWidth:38});
-  const summary=[photos.length+' included photographs','Camera numbers link to photos.','Only the warning footprint is used.','Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.'];
-  let sy=49;for(const line of summary){const wrapped=doc.splitTextToSize(ascii(line),37);doc.text(wrapped,250,sy);sy+=wrapped.length*4+5;}
+  doc.setFontSize(9);doc.setTextColor(30,47,60);const area=doc.splitTextToSize(ascii(snapshot.scopeLabel||snapshot.profileLabel+' warning area'),37),areaLines=area.slice(0,6);if(area.length>6)areaLines[5]=areaLines[5].slice(0,-3)+'...';doc.text(areaLines,250,30);
+  const summary=[photos.length+' included photographs','Camera numbers link to photos.','Only the selected warning footprint is used.',...(snapshot.floodNotice?['The outline marks the selected warning. Other warnings provide map context.']:[]),'Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.'];
+  let sy=Math.max(49,30+areaLines.length*4+5);for(const line of summary){const wrapped=doc.splitTextToSize(ascii(line),37);doc.text(wrapped,250,sy);sy+=wrapped.length*4+5;}
   doc.setFontSize(7);doc.setTextColor(90);doc.text('Sources: TMR / BCC camera services; BoM warning via authenticated ArcGIS; Queensland boundaries; Esri basemap.',9,191);
   for(let page=0;page<indexPages;page++){checkAbort(signal);doc.addPage();header('Camera index',2+page);const subset=photos.slice(page*24,(page+1)*24);
     subset.forEach((entry,k)=>{const index=page*24+k,col=k>=12?1:0,row=k%12,x=9+col*143,y=29+row*13.4;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(25,75,111);doc.text(String(index+1)+'.',x,y);doc.setFont('helvetica','normal');doc.setTextColor(35);const name=doc.splitTextToSize(ascii(entry.camera.name),125).slice(0,2);doc.text(name,x+8,y);doc.link(x,y-4,135,12,{pageNumber:pageFor(index)});});

@@ -19,6 +19,12 @@ export function intersectFloodPixels(mask,inside,{minimumHits=12}={}){
 }
 export const intersectFloodMask=(mask,geometries)=>intersectFloodPixels(mask,floodGeometryPixels(mask,geometries));
 
+export function scopeFloodWeather(weather,geometries,{intersect=intersectFloodMask}={}){
+  const scoped=geometries?.length?intersect(weather.mask,geometries):null;
+  if(!weather.active||!scoped?.active||geometries.some(geometry=>!intersect(weather.mask,[geometry]).active))throw new Error('The map does not yet show every catchment in this BoM warning. Refresh warnings and try again.');
+  return {...weather,mask:scoped.mask};
+}
+
 // Adjacent active catchments can touch in WMS pixels. Identify products from
 // their reference geometry before grouping, rather than naming a connected
 // raster component from one arbitrarily chosen sample point.

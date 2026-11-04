@@ -1,14 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {partitionFloodAreas,intersectFloodPixels} from '../js/flood-scope.js';
+import {partitionFloodAreas,intersectFloodPixels,scopeFloodWeather} from '../js/flood-scope.js';
 import {projectedBounds,pixelPoint,contains} from '../js/geometry.js';
 import {components,maskContains} from '../js/raster.js';
 import {selectGauges} from '../js/gauges.js';
+import {selectCameras} from '../js/cameras.js';
 
 const polygon=(w,s,e,n)=>({type:'Polygon',coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}),feature=(aac,name,product,geometry,parent='')=>({type:'Feature',properties:{aac,dist_name:name,product_id:product,aac_parent:parent},geometry});
 const width=80,height=80,extent=projectedBounds([150,-28,154,-24]),mask={width,height,extent,visible:Uint8Array.from({length:width*height},(_,i)=>{const x=i%width,y=Math.floor(i/width);return x>4&&x<75&&y>4&&y<75?1:0;})};
 const rasterise=(mask,geometries)=>Uint8Array.from(mask.visible,(_,i)=>geometries.some(geometry=>contains(pixelPoint(i%mask.width+.5,Math.floor(i/mask.width)+.5,mask.extent,mask.width,mask.height),geometry))?1:0);
 const references={features:[feature('QLD_C','Lower Condamine River','IDQ_C',polygon(150,-28,152,-24)),feature('QLD_C_CHILD','Lower reach','IDQ_C',polygon(150,-28,151,-26),'QLD_C'),feature('QLD_B','Burnett River','IDQ_B',polygon(152,-28,154,-24))]},options={key:'floodWarnings',kind:'Flood Warning',names:['IDZ20013'],titles:[],rasterise};
+test('neighbouring warnings stay in the displayed map while all report selections use only the chosen notice',()=>{
+  const canvas={name:'Full source map with two neighbouring warnings'},weather={active:true,mask,canvas},geometries=[references.features[0].geometry],intersect=(mask,geometries)=>intersectFloodPixels(mask,rasterise(mask,geometries)),scoped=scopeFloodWeather(weather,geometries,{intersect});
+  assert.equal(scoped.canvas,canvas);assert.equal(weather.mask,mask);assert.ok(maskContains(mask,[153,-26]));assert.equal(maskContains(scoped.mask,[153,-26]),false);
+  const items=[{id:'selected',name:'Selected',point:[151,-26],url:'https://example.invalid/selected.jpg'},{id:'neighbour',name:'Neighbour',point:[153,-26],url:'https://example.invalid/neighbour.jpg'}];
+  assert.deepEqual(selectGauges(items,[scoped.mask]).map(gauge=>gauge.id),['selected']);assert.deepEqual(selectCameras(items,[scoped.mask]).map(camera=>camera.id),['selected']);
+});
+test('visible neighbouring pixels cannot satisfy a missing selected catchment',()=>{
+  const other={...mask,visible:Uint8Array.from(mask.visible,(value,index)=>index%width>40?value:0)},intersect=(mask,geometries)=>intersectFloodPixels(mask,rasterise(mask,geometries));
+  assert.throws(()=>scopeFloodWeather({active:true,mask:other,canvas:{}},[references.features[0].geometry],{intersect}),/every catchment/);
+  assert.throws(()=>scopeFloodWeather({active:true,mask,canvas:{}},[],{intersect}),/every catchment/);
+});
 test('touching active warnings remain separate products with their own gauge and camera footprints',()=>{
   assert.equal(components(mask).length,1,'The original connected-component approach merges both products.');const areas=partitionFloodAreas(mask,references,options);assert.equal(areas.length,2);const condamine=areas.find(area=>area.title.endsWith('Lower Condamine River')),burnett=areas.find(area=>area.title.endsWith('Burnett River'));assert.ok(condamine&&burnett);assert.equal(condamine.referenceFeatures.length,2);
   const west=[151,-26],east=[153,-26];assert.ok(maskContains(condamine.components[0].mask,west));assert.equal(maskContains(condamine.components[0].mask,east),false);assert.ok(maskContains(burnett.components[0].mask,east));assert.equal(maskContains(burnett.components[0].mask,west),false);
