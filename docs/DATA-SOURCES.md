@@ -187,6 +187,7 @@ including import-map targets and query-string versioned paths.
 
 `data/gauge-flow.json` is a static reference built from the public BoM
 [National Flood Gauge Network station catalogue](https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/5)
+with BoM's [Queensland river-height station directory](https://www.bom.gov.au/qld/flood/networks/section3.shtml)
 and [Geofabric Surface Hydrology Network V3.3](https://services-ap1.arcgis.com/ypkPEy1AmwPKGNNv/arcgis/rest/services/Geofabric_Surface_Hydrology_Network/FeatureServer),
 published openly by Geoscience Australia's Digital Atlas. The original BoM
 Geofabric service is also recorded in the reference provenance. Attribution:
@@ -200,9 +201,20 @@ Geofabric gauging stations. Numeric AWRC aliases can differ in leading zeroes
 and an absent suffix; conflicting non-empty suffixes are rejected. A unique
 nearby network match is still required. Catalogue-to-
 network positions must be within 1,500 m. Flagged source matches and ambiguous
-alternatives are rejected. Other stations can match an explicitly named river
-segment within 120 m only when no competing channel lies within a 60 m distance
-margin. Consecutive segments meeting at the gauge are treated as one channel.
+alternatives are rejected. The directory's publication date (5 January 2022)
+is recorded. Its river names and missing AWRC aliases are used only when the
+BoM station ID agrees and its location is within 250 m of the current catalogue;
+current AWRC aliases are never replaced. An exact site name can also match an
+unflagged network gauge within 250 m when all compatible candidates identify
+the same stream. This preserves headwater/tailwater names, rejects conflicting
+explicit river names and does not override conflicting AWRC suffixes.
+
+Other stations can match explicitly named river segments within 120 m.
+Parenthesised watercourses, river-name prefixes and standalone creek/gully names
+are recognised. Every plausible channel within that tolerance is retained;
+a relationship is published only when every placement of both stations agrees.
+This permits shared downstream connections after rejoining channels while
+leaving the order between their separate branches unresolved.
 Multipart or indeterminate-direction segments do not establish ordering.
 
 Flow relationships follow `NextDownID` and the explicit alternate downstream
@@ -224,7 +236,10 @@ Source `Stream` and `Basin` fields are retained for unmatched gauges; numeric
 
 Unknown IDs, moved gauges, isolated incomparable reaches and missing/corrupt
 reference data are labelled **Order unconfirmed**. Their readings, classifications
-and graphs remain available. The source station list still uses the selected
+and graphs remain available. A singleton branch with an explicit upstream or
+downstream connection to another selected gauge is confirmed, while its reach
+remains separate. A multi-channel match without a confirmed connection to a
+selected gauge remains unconfirmed. The source station list still uses the selected
 flood mask; the reference never adds gauges from outside the selected area.
 Reference loading is cancellable, starts only after a selected gauge list is
 available and is cached in memory after validation. Its URL shares the flow
@@ -235,15 +250,23 @@ Refresh with `python3 scripts/refresh-gauge-flow.py`. Optional `--cache-dir` and
 and restricted endpoints fail without requesting or bypassing credentials.
 Where complete older V3.3 downloads are reused, their HydroID topology is checked
 against the public Digital Atlas copy before combining sources. Commit the
-resulting JSON with the application. Its `retrievedUtc` is a reference retrieval
-time, separate from all gauge observation, feed-update and graph-retrieval times.
+resulting JSON with the application. Its legacy `retrievedUtc` field records the
+bundle's rebuild time, including when cached downloads are used; it is not an
+observation or source-freshness timestamp. It is separate from all gauge
+observation, feed-update and graph-retrieval times. New connector downloads are
+bounded to the reference extent with a quarter-degree margin; any unresolved
+continuation beyond it remains a gap, never an assumed downstream connection.
 
 `--offline` rebuilds from complete cached station, named-stream and flow-split
 downloads plus the cached connector reaches. It makes no network requests and
 publishes only directed station paths explicitly present in those files.
 Unresolved downstream continuations are counted in the JSON; they never create
-an inferred connection. The shipped 4 November 2026 snapshot contains 1,172
+an inferred connection. The shipped 5 November 2026 (AEST) rebuild contains 1,473
 matched stations from a 1,945-station public catalogue, with one cyclic match
-excluded and one unresolved continuation. These are reference counts, not a
+excluded and no unresolved continuation in the downloaded topology. Of the 301
+additional matches, 283 have a confirmed relationship to another reference
+station; 18 are isolated matches. Three former relationships were removed because
+not every plausible channel placement agreed; a fourth linked two source records
+now matched to the same network gauge position. These are reference counts, not a
 claim about coverage of the user's private observation feed. Live gauges without
 a confident ID/location/path comparison remain marked **Order unconfirmed**.
