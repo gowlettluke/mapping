@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normaliseGauges,selectGauges,gaugeCategory,gaugeGraphLink,gaugeTiming,retrieveGaugeGraphs,discoverGauges} from '../js/gauges.js';
 import {ArcGISConnection} from '../js/arcgis.js';
-import {floodPdfPlan,floodReportPdf} from '../js/flood-pdf.js';
+import {gaugePdfPlan,gaugeReportPdf} from '../js/flood-pdf.js';
 import {setCanvasFactory} from '../js/utils.js';
 import {projectedBounds,pixelPoint} from '../js/geometry.js';
 import {CONFIG} from '../config.js';
@@ -111,27 +111,27 @@ test('graph retrieval preserves missing/failed stations, defers requests and use
     const controller=new AbortController();controller.abort();await assert.rejects(retrieveGaugeGraphs(gauges,{signal:controller.signal}),{name:'AbortError'});
   }finally{globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
 });
-test('combined flood PDF page targets handle gauges only, cameras only and multi-page reports',()=>{
-  for(const [gauges,photos]of [[1,0],[0,1],[11,25],[101,49]]){const plan=floodPdfPlan(gauges,photos),targets=[];if(gauges){targets.push(plan.gaugeOverview,plan.gaugeSummary,plan.gaugeGraphs);assert.ok(plan.gaugeGraphs+Math.floor((gauges-1)/4)<=plan.total);}if(photos){targets.push(plan.cameraOverview,plan.cameraIndex,plan.cameraPhotos);assert.ok(plan.cameraPhotos+Math.floor((photos-1)/6)<=plan.total);}assert.ok(targets.every(target=>target>=1&&target<=plan.total));assert.equal(new Set(targets).size,targets.length);}
-  assert.throws(()=>floodPdfPlan(0,0),/No gauges/);assert.equal(floodPdfPlan(1,0).total,3);assert.equal(floodPdfPlan(0,1).total,3);assert.equal(floodPdfPlan(11,25).total,13);
+test('gauge PDF page targets contain only the gauge map, index and graph pages',()=>{
+  for(const count of [1,11,21,101]){const plan=gaugePdfPlan(count),targets=[plan.gaugeOverview,plan.gaugeSummary,plan.gaugeGraphs];assert.ok(plan.gaugeGraphs+Math.floor((count-1)/4)<=plan.total);assert.ok(targets.every(target=>target>=1&&target<=plan.total));assert.equal(new Set(targets).size,targets.length);assert.equal(plan.cameraOverview,undefined);assert.equal(plan.cameraPhotos,undefined);}
+  assert.throws(()=>gaugePdfPlan(0),/No river gauges/);assert.equal(gaugePdfPlan(1).total,3);assert.equal(gaugePdfPlan(11).total,5);
 });
 test('gauge-only PDF retains readings when graphs are missing and never embeds credential-bearing links',()=>{
   const texts=[],links=[];class PDF{addPage(){}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){texts.push(String(value));}link(x,y,w,h,target){links.push(target);}splitTextToSize(value){return [value];}addImage(){}}
   const gauge={...normalise(),label:'G1',sourceUrl:'https://graphs.example/source?token=SECRET'},snapshot={generated:new Date(now),scopeLabel:'Synthetic flood area'};
-  const result=floodReportPdf({jsPDF:PDF,snapshot,gauges:[gauge],graphs:[],gaugeOverview:{data:'synthetic',width:100,height:100}});assert.ok(result);assert.ok(texts.some(text=>text.includes('3.15')));assert.ok(texts.some(text=>text.includes('Graph unavailable')));assert.equal(links.some(link=>link.url),false);assert.ok(links.every(link=>link.pageNumber>=1&&link.pageNumber<=3));
+  const result=gaugeReportPdf({jsPDF:PDF,snapshot,gauges:[gauge],graphs:[],gaugeOverview:{data:'synthetic',width:100,height:100}});assert.ok(result);assert.ok(texts.some(text=>text.includes('3.15')));assert.ok(texts.some(text=>text.includes('Graph unavailable')));assert.equal(links.some(link=>link.url),false);assert.ok(links.every(link=>link.pageNumber>=1&&link.pageNumber<=3));
 });
 test('real BoM charts share four-panel pages with correct index targets and no overlapping image bounds',()=>{
   const pages=[],links=[],images=[];let page=0;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){pages.push({page,text:String(value)});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(data,type,x,y,width,height){images.push({page,x,y,width,height});}}
   const gauges=Array.from({length:7},(_,i)=>({...normalise({...sample,station_id:String(i),station_name:'Station '+i}),label:'G'+(i+1)})),graphs=gauges.map(gauge=>({gauge,graph:{data:'synthetic image',width:800,height:400,retrievedAt:new Date(now)}}));
-  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,graphs,gaugeOverview:{data:'synthetic overview',width:100,height:100}});assert.equal(page+1,4);assert.equal(images.filter(image=>image.page===2).length,4);assert.equal(images.filter(image=>image.page===3).length,3);assert.ok(images.filter(image=>image.page>=2).every(image=>image.width>120&&image.width<132&&image.height>60&&image.height<66));assert.ok(links.some(link=>link.page===1&&link.pageNumber===4));assert.ok(links.every(link=>!link.pageNumber||link.pageNumber<=4));
-  assert.equal(floodPdfPlan(7,0,{graphsPerPage:6}).gaugeGraphPages,2);assert.throws(()=>floodPdfPlan(2,0,{graphsPerPage:1}),/Unsupported/);
+  gaugeReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,graphs,gaugeOverview:{data:'synthetic overview',width:100,height:100}});assert.equal(page+1,4);assert.equal(images.filter(image=>image.page===2).length,4);assert.equal(images.filter(image=>image.page===3).length,3);assert.ok(images.filter(image=>image.page>=2).every(image=>image.width>120&&image.width<132&&image.height>60&&image.height<66));assert.ok(links.some(link=>link.page===1&&link.pageNumber===4));assert.ok(links.every(link=>!link.pageNumber||link.pageNumber<=4));
+  assert.equal(gaugePdfPlan(7,{graphsPerPage:6}).gaugeGraphPages,2);assert.throws(()=>gaugePdfPlan(2,{graphsPerPage:1}),/Unsupported/);
   for(const [i,a]of images.entries())for(const b of images.slice(i+1))if(a.page===b.page)assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
 });
 test('the compact gauge table paginates twenty rows and colours reported major, moderate and minor readings',()=>{
   const texts=[],links=[];let page=0,colour;class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(...value){colour=value;}setDrawColor(){}line(){}rect(){}text(value){texts.push({page,text:String(value),colour});}link(x,y,w,h,target){links.push({page,...target});}splitTextToSize(value){return [value];}addImage(){}}
   const categories=['Major','Moderate','Minor','No Classification','Below minor'],gauges=Array.from({length:21},(_,i)=>({...normalise({...sample,station_id:String(i),station_name:'Station '+i,flood_classification:categories[i%5]}),label:'G'+(i+1)}));
-  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,gaugeOverview:{data:'synthetic overview',width:100,height:100}});
-  assert.equal(floodPdfPlan(21,0).gaugeSummaryPages,2);assert.equal(texts.filter(entry=>entry.page===1&&/^Station /.test(entry.text)).length,20);assert.equal(texts.filter(entry=>entry.page===2&&/^Station /.test(entry.text)).length,1);
+  gaugeReportPdf({jsPDF:PDF,snapshot:{generated:new Date(now),scopeLabel:'Synthetic scope'},gauges,gaugeOverview:{data:'synthetic overview',width:100,height:100}});
+  assert.equal(gaugePdfPlan(21).gaugeSummaryPages,2);assert.equal(texts.filter(entry=>entry.page===1&&/^Station /.test(entry.text)).length,20);assert.equal(texts.filter(entry=>entry.page===2&&/^Station /.test(entry.text)).length,1);
   const table=texts.filter(entry=>[1,2].includes(entry.page));for(const header of ['Level (m)','Classification','Trend','Observed (AEST)'])assert.ok(table.some(entry=>entry.text===header));
   const row=name=>table.find(entry=>entry.text.startsWith(name+' ['));assert.deepEqual(row('Station 0').colour,[177,32,47]);assert.deepEqual(row('Station 1').colour,[148,111,0]);assert.deepEqual(row('Station 2').colour,[26,114,69]);assert.deepEqual(row('Station 3').colour,row('Station 4').colour);assert.ok(!table.some(entry=>/Feed updated:|Observation over/.test(entry.text)));assert.ok(links.some(link=>link.page===2&&link.pageNumber===9));
 });

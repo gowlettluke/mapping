@@ -1,5 +1,6 @@
 import {canvas,clean} from './utils.js';
 import {bounds,overlap,projectedBounds,path,transform} from './geometry.js';
+import {floodGeometryPixels} from './flood-scope.js';
 
 const intersects=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
 export function mapReservations(width,height,locator){const boxes=[{x:12,y:height-57,width:220,height:45}];if(locator?.features?.length)boxes.push({x:width-153,y:12,width:141,height:182});return boxes;}
@@ -27,6 +28,15 @@ export function nativeFloodLabels(image){
 }
 
 function lines(ctx,name,maxWidth){const result=[];let line='';for(const word of name.split(/\s+/)){const next=line?line+' '+word:word;if(line&&ctx.measureText(next).width>maxWidth){result.push(line);line=word;}else line=next;}if(line)result.push(line);return result;}
+export function nativeFloodLabelsInAreas(image,extent,geometries){
+  const labels=nativeFloodLabels(image);if(!labels)return null;
+  const {width,height}=image,inside=floodGeometryPixels({width,height,extent,visible:new Uint8Array(width*height)},geometries);
+  const boxes=labels.boxes.filter(box=>{for(let y=Math.max(0,Math.floor(box.y));y<Math.min(height,box.y+box.height);y++)for(let x=Math.max(0,Math.floor(box.x));x<Math.min(width,box.x+box.width);x++)if(inside[y*width+x])return true;return false;});
+  if(!boxes.length)return null;
+  // Keep a whole label when it overlaps a current warning. Clipping individual
+  // glyphs to a narrow catchment cuts river names off at the boundary.
+  const c=canvas(width,height),ctx=c.getContext('2d');ctx.beginPath();for(const box of boxes)ctx.rect(box.x,box.y,box.width,box.height);ctx.clip();ctx.drawImage(labels.image,0,0);return {...labels,image:c,boxes};
+}
 export function catchmentFloodLabels(mask,collection,{reserved=[]}={}){
   const {width,height,extent}=mask,c=canvas(width,height),ctx=c.getContext('2d');ctx.font='bold 17px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
   const step=4,w=Math.ceil(width/step),h=Math.ceil(height/step),project=transform(extent,w,h),candidates=new Map(),visible=new Int32Array(w*h).fill(-1);
@@ -50,3 +60,10 @@ export function catchmentFloodLabels(mask,collection,{reserved=[]}={}){
 }
 
 export function floodLegendLayout(image,width){if(!image)return {height:35};const scale=Math.min(1.5,(width-32)/image.width,400/image.height);return {height:Math.ceil(image.height*scale)+34,width:image.width*scale,imageHeight:image.height*scale};}
+
+export function combinedFloodLegend(layers){
+  if(layers.length===1)return layers[0].legend;
+  const width=Math.max(300,...layers.map(layer=>layer.legend?.width||0)),height=layers.reduce((sum,layer)=>sum+30+(layer.legend?.height||22),0),c=canvas(width,height),ctx=c.getContext('2d');let y=0;
+  for(const layer of layers){ctx.font='bold 12px Arial';ctx.fillStyle='#333';ctx.fillText(layer.kind+(layer.selected?'':' (nearby)'),0,y+14);y+=22;if(layer.legend){ctx.drawImage(layer.legend,0,y);y+=layer.legend.height;}else{ctx.font='12px Arial';ctx.fillText('Source legend unavailable',0,y+14);y+=22;}y+=8;}
+  return c;
+}

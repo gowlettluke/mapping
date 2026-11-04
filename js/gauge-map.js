@@ -1,6 +1,6 @@
 import {canvas,aest} from './utils.js';
 import {path,transform,scaleBar} from './geometry.js';
-import {annotations,wrap} from './renderer.js';
+import {annotations,wrap,drawSelectionKey} from './renderer.js';
 import {layoutOutageLabels} from './map-labels.js';
 import {floodLegendLayout} from './flood-display.js';
 import {GAUGE_COLOURS} from './gauges.js';
@@ -18,10 +18,10 @@ export function drawGaugeMarkers(ctx,snapshot,gauges,width,height,{offsetY=0}={}
   });ctx.restore();
 }
 export function gaugeMap(snapshot,gauges){
-  const width=snapshot.warning.width,height=snapshot.warning.height,top=70,floodLegend=floodLegendLayout(snapshot.floodDisplay?.legend,width),legendHeight=floodLegend.height+100,c=canvas(width,top+height+legendHeight+78),ctx=c.getContext('2d'),project=transform(snapshot.extent,width,height),kind=snapshot.floodDisplay?.kind||'Flood Warning / Watch';
+  const width=snapshot.warning.width,height=snapshot.warning.height,top=70,floodLegend=floodLegendLayout(snapshot.floodDisplay?.legend,width),legendHeight=floodLegend.height+100+(snapshot.selectionOutline?22:0),c=canvas(width,top+height+legendHeight+78),ctx=c.getContext('2d'),project=transform(snapshot.extent,width,height),kind=snapshot.floodDisplay?.kind||'Flood Warning / Watch';
   ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#17222c';ctx.font='bold 25px Arial';ctx.fillText('Queensland '+kind+' + River Gauges',16,29);ctx.font='13px Arial';ctx.fillStyle='#58636c';ctx.fillText(snapshot.scopeLabel,16,53);
   ctx.save();ctx.translate(0,top);ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();ctx.drawImage(snapshot.background,0,0,width,height);
-  lines(ctx,snapshot.lgas,project,'rgba(100,108,114,.48)',1);lines(ctx,snapshot.context.coastline,project,'#4a555c',1.2);lines(ctx,snapshot.context.border,project,'#34424b',1.8);ctx.drawImage(snapshot.warning,0,0,width,height);
+  lines(ctx,snapshot.lgas,project,'rgba(100,108,114,.48)',1);lines(ctx,snapshot.context.coastline,project,'#4a555c',1.2);lines(ctx,snapshot.context.border,project,'#34424b',1.8);ctx.drawImage(snapshot.warning,0,0,width,height);if(snapshot.selectionOutline)ctx.drawImage(snapshot.selectionOutline,0,0,width,height);
   if(snapshot.floodDisplay?.labels)ctx.drawImage(snapshot.floodDisplay.labels,0,0,width,height);ctx.font='bold 16px Arial';drawGaugeMarkers(ctx,snapshot,gauges,width,height,{offsetY:top});annotations(ctx,snapshot.extent,width,height,snapshot.context.locator);
   if(snapshot.demo){ctx.font='bold 32px Arial';ctx.fillStyle='#962632';ctx.fillText('DEMO - SYNTHETIC GAUGES',22,48);}ctx.strokeStyle='#61717b';ctx.lineWidth=1;ctx.strokeRect(.5,.5,width-1,height-1);ctx.restore();
   let y=top+height;ctx.font='bold 12px Arial';ctx.fillStyle='#333';ctx.fillText(kind+' — '+(snapshot.floodDisplay?.legend?'source legend':'source legend unavailable'),16,y+20);
@@ -30,7 +30,7 @@ export function gaugeMap(snapshot,gauges){
   for(const [index,[category,label]]of [['below','Below minor / no flooding'],['minor','Minor'],['moderate','Moderate'],['major','Major'],['unknown','Unknown / not supplied']].entries()){
     const x=16+index*(width-32)/5;ctx.fillStyle=GAUGE_COLOURS[category];ctx.fillRect(x,y+33,20,16);ctx.fillStyle='#333';ctx.fillText(label,x+27,y+46);
   }
-  ctx.fillStyle='#58636c';ctx.fillText(gauges.length+' gauges. G numbers match the list/PDF. '+gaugeFlowSummary(gauges),16,y+72);
+  if(snapshot.selectionOutline)drawSelectionKey(ctx,16,y+72);ctx.fillStyle='#58636c';ctx.fillText(gauges.length+' gauges. G numbers match the list/PDF. '+gaugeFlowSummary(gauges),16,y+(snapshot.selectionOutline?94:72));
   const footer=['Generated '+aest(snapshot.generated),snapshot.demo?'Synthetic fixtures - not operational observations.':'Sources: BoM observations / QFD, flood warnings and National Flood Gauge Network; Geofabric © Commonwealth of Australia (BoM) 2022 via Digital Atlas, Geoscience Australia.',snapshot.context.credits?.copyrightText?'Basemap: '+snapshot.context.credits.copyrightText:'Basemap: Esri and contributors.'];
   ctx.font='11px Arial';let fy=top+height+legendHeight+15;for(const line of footer.flatMap(text=>wrap(ctx,text,width-30))){ctx.fillText(line,15,fy);fy+=15;}
   return c;

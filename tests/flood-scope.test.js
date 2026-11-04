@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {partitionFloodAreas,intersectFloodPixels} from '../js/flood-scope.js';
+import {partitionFloodAreas,intersectFloodPixels,floodSelectionOutline} from '../js/flood-scope.js';
 import {projectedBounds,pixelPoint,contains} from '../js/geometry.js';
 import {components,maskContains} from '../js/raster.js';
+import {setCanvasFactory} from '../js/utils.js';
 import {selectGauges} from '../js/gauges.js';
 
 const polygon=(w,s,e,n)=>({type:'Polygon',coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}),feature=(aac,name,product,geometry,parent='')=>({type:'Feature',properties:{aac,dist_name:name,product_id:product,aac_parent:parent},geometry});
@@ -31,4 +32,10 @@ test('small interior slivers and antialiased fringes do not add spurious flood p
   const inside=rasterise(mask,[references.features[2].geometry]),sliver={...mask,visible:Uint8Array.from(mask.visible,(_,i)=>{const x=i%width,y=Math.floor(i/width);return x===40||y===0||y===height-1||x===41&&y>=20&&y<40?1:0;})};
   const detected=intersectFloodPixels(sliver,inside);assert.ok(detected.interiorHits>=12);assert.equal(detected.active,false);
   const fringe={...mask,visible:Uint8Array.from(mask.visible,(_,i)=>{const x=i%width,y=Math.floor(i/width);return x>=10&&x<=40&&y>=10&&y<=70?1:0;})},areas=partitionFloodAreas(fringe,{features:[references.features[0]]},options);assert.equal(areas.length,1);assert.equal(areas[0].identified,true);
+});
+
+test('selected outline follows the catchment union without internal seams or hatch outlines',()=>{
+  const strokes=[],segments=[];let last;setCanvasFactory((width,height)=>({width,height,getContext:()=>({beginPath(){},moveTo(x,y){last=[x,y];},lineTo(x,y){segments.push([last,[x,y]]);},stroke(){strokes.push(this.strokeStyle);}})}));
+  const outlines=floodSelectionOutline({...mask,visible:new Uint8Array(mask.visible.length)},[references.features[0].geometry,references.features[2].geometry],{rasterise});assert.equal(outlines.width,80);assert.deepEqual(strokes,['#fff','#173e65']);
+  assert.ok(segments.length>100);assert.ok(segments.every(([a,b])=>a[0]===b[0]&&(a[0]===0||a[0]===80)||a[1]===b[1]&&(a[1]===0||a[1]===80)),'Only the outside perimeter is traced, despite a shared catchment boundary and a blank coloured-pixel mask.');
 });

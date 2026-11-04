@@ -75,3 +75,9 @@ test('unlabelled small outages remain drawn, unknown counts stay distinct and re
   const powerCounts={energex:{rows:[{label:'Test Regional',count:153}]},ergon:{rows:[]}};
   const report=buildReport({lgas:[lga],allLgas:collection([lga]),powerCounts,trafficAvailable:true,asAt:'Test snapshot',scope:'Selected LGAs'});assert.match(report.text,/153 customers/);assert.doesNotMatch(report.text,/888|999/);
 });
+
+test('selected warning outline appears on both maps with its own key above the context and radar',()=>{
+  const input=fixture();input.profile='flooding';input.selectionOutline={selected:true};const output=composeProducts(input);
+  for(const image of [output.radar,output.infrastructure]){assert.ok(image.images.includes(input.warning));assert.ok(image.images.includes(input.selectionOutline));assert.ok(image.images.indexOf(input.selectionOutline)>image.images.indexOf(input.warning));assert.ok(image.texts.includes('Selected warning'));}
+  assert.ok(output.radar.images.indexOf(input.selectionOutline)>output.radar.images.indexOf(input.radar));
+});

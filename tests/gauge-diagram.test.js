@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {gaugeFlowNetwork,gaugeDiagramLayout,drawGaugeDiagram,shortGaugeName,gaugeDiagramPdf} from '../js/gauge-diagram.js';
 import {orderGaugesByFlow} from '../js/gauge-flow.js';
-import {floodPdfPlan,floodReportPdf} from '../js/flood-pdf.js';
+import {gaugePdfPlan,gaugeReportPdf} from '../js/flood-pdf.js';
 import {setCanvasFactory} from '../js/utils.js';
 
 const gauge=(label,flowDownstream=[],extra={})=>({label,id:label,stationId:label,name:'Example River at '+label,river:'Example River',point:[145,-25],height:3.15,reportedCategory:'Minor',category:'minor',trend:'Steady',observedAt:new Date('2026-11-04T00:00:00Z'),updatedAt:new Date('2026-11-04T00:00:00Z'),flowDownstream,...extra});
@@ -65,13 +65,13 @@ test('PDF river stations are readable vector text with preserved graph-link area
   const pdf={setDrawColor(){},setLineWidth(){},line(){},setFillColor(){},rect(){},circle(){},setFont(){},setFontSize(value){size=value;},setTextColor(){},splitTextToSize(value){return [value];},text(value){texts.push({value:String(value),size});}};
   const links=gaugeDiagramPdf(pdf,snapshot,page);assert.equal(links.length,2);assert.ok(texts.some(text=>text.value.includes('Upper Bridge')&&text.size>=9));assert.ok(texts.some(text=>text.value.includes('3.15 m')&&text.size>=9));assert.ok(links.every(link=>link.x>=9&&link.y>=26&&link.x+link.width<=288&&link.y+link.height<=192));
 });
-test('PDF flow pages shift map, table, graph and camera destinations together',()=>{
-  const gauges=Array.from({length:21},(_,index)=>gauge('G'+(index+1))),diagrams=[0,1].map(index=>({data:'synthetic flow '+index,width:1800,height:1080,nodes:[{label:gauges[index*20].label,x:100,y:200,width:400,height:138}]})),plan=floodPdfPlan(21,1,{flowDiagramPages:2}),links=[],titles=[],images=[];let page=1;
+test('gauge PDF flow pages shift table and graph links without adding camera sections',()=>{
+  const gauges=Array.from({length:21},(_,index)=>gauge('G'+(index+1))),diagrams=[0,1].map(index=>({data:'synthetic flow '+index,width:1800,height:1080,nodes:[{label:gauges[index*20].label,x:100,y:200,width:400,height:138}]})),plan=gaugePdfPlan(21,{flowDiagramPages:2}),links=[],titles=[],images=[];let page=1;
   class PDF{addPage(){page++;}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){titles.push({page,value:String(value)});}link(x,y,width,height,target){links.push({page,x,y,width,height,...target});}splitTextToSize(value){return [value];}addImage(data,type,x,y,width,height){images.push({page,data,x,y,width,height});}}
   const overview={data:'synthetic overview',width:100,height:100},photos=[{camera:{name:'Synthetic camera',sourceLabel:'Synthetic source',marker:{x:10,y:10}},photo:{...overview,retrievedAt:new Date()}}];
-  floodReportPdf({jsPDF:PDF,snapshot:{generated:new Date('2026-11-04T00:00:00Z'),scopeLabel:'Synthetic scope'},gauges,flowDiagrams:diagrams,photos,gaugeOverview:overview,cameraOverview:overview});
-  assert.equal(plan.gaugeFlow,2);assert.equal(plan.gaugeSummary,4);assert.equal(plan.gaugeGraphs,6);assert.equal(plan.cameraOverview,12);assert.equal(page,plan.total);assert.equal(titles.filter(item=>item.value.startsWith('River Flow')).length,2);
+  gaugeReportPdf({jsPDF:PDF,snapshot:{generated:new Date('2026-11-04T00:00:00Z'),scopeLabel:'Synthetic scope'},gauges,flowDiagrams:diagrams,photos,gaugeOverview:overview,cameraOverview:overview});
+  assert.equal(plan.gaugeFlow,2);assert.equal(plan.gaugeSummary,4);assert.equal(plan.gaugeGraphs,6);assert.equal(plan.total,11);assert.equal(plan.cameraOverview,undefined);assert.ok(!titles.some(item=>/camera/i.test(item.value)));assert.equal(page,plan.total);assert.equal(titles.filter(item=>item.value.startsWith('River Flow')).length,2);
   assert.ok(links.some(item=>item.page===2&&item.pageNumber===plan.gaugeGraphs));assert.ok(links.some(item=>item.page===3&&item.pageNumber===plan.gaugeGraphs+5));assert.ok(links.every(item=>!item.pageNumber||item.pageNumber>=1&&item.pageNumber<=plan.total));
   assert.ok(images.filter(item=>String(item.data).startsWith('synthetic flow')).every(item=>item.x>=9&&item.y>=26&&item.x+item.width<=288&&item.y+item.height<=192));
-  assert.throws(()=>floodPdfPlan(0,1,{flowDiagramPages:1}),/Invalid/);assert.throws(()=>floodPdfPlan(1,0,{flowDiagramPages:-1}),/Invalid/);
+  assert.throws(()=>gaugePdfPlan(0,{flowDiagramPages:1}),/No river gauges/);assert.throws(()=>gaugePdfPlan(1,{flowDiagramPages:-1}),/Invalid/);
 });

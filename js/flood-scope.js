@@ -19,6 +19,20 @@ export function intersectFloodPixels(mask,inside,{minimumHits=12}={}){
 }
 export const intersectFloodMask=(mask,geometries)=>intersectFloodPixels(mask,floodGeometryPixels(mask,geometries));
 
+export function floodSelectionOutline(mask,geometries,{rasterise=floodGeometryPixels}={}){
+  const inside=rasterise(mask,geometries),{width,height}=mask,c=canvas(width,height),ctx=c.getContext('2d');ctx.beginPath();
+  // Trace the union of filled catchment geometry, not the warning's hatching.
+  // Shared boundaries between selected catchments therefore disappear.
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const i=y*width+x;if(!inside[i])continue;
+    if(!y||!inside[i-width]){ctx.moveTo(x,y);ctx.lineTo(x+1,y);}
+    if(x===width-1||!inside[i+1]){ctx.moveTo(x+1,y);ctx.lineTo(x+1,y+1);}
+    if(y===height-1||!inside[i+width]){ctx.moveTo(x+1,y+1);ctx.lineTo(x,y+1);}
+    if(!x||!inside[i-1]){ctx.moveTo(x,y+1);ctx.lineTo(x,y);}
+  }
+  ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle='#fff';ctx.lineWidth=7;ctx.stroke();ctx.strokeStyle='#173e65';ctx.lineWidth=3;ctx.stroke();return c;
+}
+
 // Adjacent active catchments can touch in WMS pixels. Identify products from
 // their reference geometry before grouping, rather than naming a connected
 // raster component from one arbitrarily chosen sample point.

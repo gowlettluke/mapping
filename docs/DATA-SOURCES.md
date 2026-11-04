@@ -63,19 +63,17 @@ The [Queensland-published BoM Land Warnings RO item](https://www.arcgis.com/home
 
 Selector titles are compact group labels, not reconstructed severity headlines. In particular, a mixed minor/moderate warning is not assigned one severity. The original BoM notice is linked alongside the selection. Explicit product/AAC aliases distinguish the Stanley River from the broader Upper Brisbane reference and Burnett's Boyne tributary from Gladstone's separate Boyne River.
 
-Current source polygons supply all the selected catchments, including disconnected ones. Generation rechecks the notice revision before requesting its WMS image, intersects that image with the selected geometries and rejects a partial render missing any catchment. Maps, gauges, cameras and report LGAs use that combined footprint. Broad inactive reference parents cannot expand it. An empty notice feed permits statewide context only if the WMS also shows no warning/watch pixels. A mismatch requires a refresh. Existing river diagrams continue to use verified river-system topology.
+Current source polygons supply all the selected catchments, including disconnected ones. Generation rechecks the notice revision before requesting its WMS image, intersects that image with the selected geometries and rejects a partial render missing any catchment. Data analysis, gauges, cameras and report LGAs use that selected footprint. Regional maps also show other current warnings and watches inside the same frame; those context areas cannot expand the selected scope. Broad inactive reference parents are excluded. An empty notice feed permits statewide context only if the WMS also shows no warning/watch pixels. A mismatch requires a refresh. Existing river diagrams continue to use verified river-system topology.
 
 ## Flood display
 
-Flood JPEGs retain the original WMS image. They skip the additional brown
-`outlineCanvas` pass: tracing every edge in a colour-detection mask also traces
-internal hatching and can turn fine source patterns into dense brown shading.
+Flood JPEGs retain native WMS colours and patterns. Current nearby warnings of the selected type remain visible, and a separately queried warning/watch layer adds other current flood context when it intersects the selected frame. An unavailable context layer produces a notice and does not block the selected warning. Native source legends identify both layer types when present. A navy line with a white halo identifies only the selected warning; it is drawn from the union of filled catchment geometry, so internal catchment seams and flood hatching are not traced. It denotes selection, not severity. Both main maps and camera/gauge overviews use this outline. The zoom is still fitted exclusively to the selected warning.
 Storm and severe-weather rendering retain their existing outline. Basemap,
 LGA/coast/state styling, road symbology, outage shading and label thresholds are
 unchanged.
 
 `IDZ20013_label` / `IDZ20016_label` are requested separately for the selected
-warning/watch type. Their readable transparent image gets a white halo and is
+warning/watch type. Whole native label footprints are retained when they overlap current warning geometry, avoiding cropped river names at narrow catchment boundaries. Their readable transparent image gets a white halo and is
 drawn above the map overlays in both JPEGs. Blank/opaque substitutes are rejected.
 Name footprints reserve space in the existing outage-number layout. None of the
 label pixels enter warning detection, area selection, affected-LGA calculations
@@ -172,10 +170,16 @@ categories remain neutral. Map and station-index links follow the page layout.
 Age notices currently mark observations older than 120 minutes and layer updates
 older than 45 minutes; both values are in `CONFIG.gauges`. These notices retain
 the data and its reported classification. They are not the camera photograph
-one-hour exclusion rule and do not declare the observation invalid. Gauges-only
-PDFs remain available with no cameras and with missing graph images. In the
+one-hour exclusion rule and do not declare the observation invalid. The gauge
+PDF remains available with no cameras and with missing graph images. In the
 compact index, an asterisk flags old/unverified observation or feed-update times;
 graph captions retain the separate observation, feed and retrieval timestamps.
+
+## Separate camera and gauge reports
+
+The camera panel uses `cameraPdf` from `js/pdf.js`; its document contains only the camera overview, index and photo pages. The gauge panel uses `gaugeReportPdf` / `gaugePdfPlan` from `js/flood-pdf.js`; that document contains only the gauge overview, river diagrams, station table and graph pages. Page destinations are calculated independently. Four graphs per page, vector river diagrams, source links and unavailable-graph placeholders are retained.
+
+Each export has its own button, progress, status and abort controller. Camera readiness depends only on camera discovery; gauge readiness depends only on gauges and their overview. Starting one export never downloads the other source’s images. The two can run concurrently, each cancel control stops only its own export, and a changed warning, sign-out or regeneration cancels both and discards late results. Both documents include only the selected warning’s cameras/gauges while keeping nearby warnings visible in their maps.
 
 Both HTML entry points use a shared release tag for the entry module and an
 import map for the configuration, connection and PDF modules. This refreshes

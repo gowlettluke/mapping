@@ -2,7 +2,7 @@ import {aest,checkAbort} from './utils.js';
 import {externalPhotoLink} from './cameras.js';
 const ascii=s=>String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\u2010-\u2015]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/[^\x20-\x7e\n]/g,'?');
 export function photoLayout(count){const columns=count<=2?count:count<=4?2:3,rows=count<=2?1:2;return {columns,rows,width:(279-(columns-1)*4)/columns,height:(169-(rows-1)*4)/rows};}
-export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
+export function cameraPdf({jsPDF,snapshot,photos,overview,notes=[],signal}){
   if(!photos.length)throw new Error('No eligible photographs were retrieved; no PDF was generated');checkAbort(signal);
   if(typeof jsPDF!=='function')throw new Error('The bundled PDF library did not load. Reload the page.');
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true}),indexPages=Math.ceil(photos.length/24),photoStart=2+indexPages,photoPages=Math.ceil(photos.length/6),total=1+indexPages+photoPages;
@@ -12,9 +12,9 @@ export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
   const ix=9,iy=26,iw=235,ih=158,ratio=Math.min(iw/overview.width,ih/overview.height),dw=overview.width*ratio,dh=overview.height*ratio;
   doc.addImage(overview.data,'JPEG',ix,iy,dw,dh);
   photos.forEach((entry,i)=>{const m=entry.camera.marker;if(m)doc.link(ix+m.x/overview.width*dw-2.5,iy+m.y/overview.height*dh-2.5,5,5,{pageNumber:pageFor(i)});});
-  doc.setFontSize(9);doc.setTextColor(30,47,60);doc.text(ascii(snapshot.profileLabel+' warning area'),250,30,{maxWidth:38});
-  const summary=[photos.length+' included photographs','Camera numbers link to photos.','Only the warning footprint is used.','Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.'];
-  let sy=49;for(const line of summary){const wrapped=doc.splitTextToSize(ascii(line),37);doc.text(wrapped,250,sy);sy+=wrapped.length*4+5;}
+  doc.setFontSize(9);doc.setTextColor(30,47,60);const scope=doc.splitTextToSize(ascii(snapshot.scopeLabel||snapshot.profileLabel+' warning area'),37);if(scope.length>6){scope.length=6;scope[5]+='...';}doc.text(scope,250,30);
+  const summary=[photos.length+' included photographs','Camera numbers link to photos.','Only cameras in the selected warning footprint are included.',...(snapshot.selectionOutline?['Navy outline: selected warning. Nearby warnings provide context.']:[]),'Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.',...notes];
+  let sy=30+scope.length*4+5;for(const line of summary){const wrapped=doc.splitTextToSize(ascii(line),37);if(sy+wrapped.length*4>185){doc.setFontSize(7);doc.text('More source details in the app.',250,Math.min(sy,185),{maxWidth:37});break;}doc.text(wrapped,250,sy);sy+=wrapped.length*4+5;}
   doc.setFontSize(7);doc.setTextColor(90);doc.text('Sources: TMR / BCC camera services; BoM warning via authenticated ArcGIS; Queensland boundaries; Esri basemap.',9,191);
   for(let page=0;page<indexPages;page++){checkAbort(signal);doc.addPage();header('Camera index',2+page);const subset=photos.slice(page*24,(page+1)*24);
     subset.forEach((entry,k)=>{const index=page*24+k,col=k>=12?1:0,row=k%12,x=9+col*143,y=29+row*13.4;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(25,75,111);doc.text(String(index+1)+'.',x,y);doc.setFont('helvetica','normal');doc.setTextColor(35);const name=doc.splitTextToSize(ascii(entry.camera.name),125).slice(0,2);doc.text(name,x+8,y);doc.link(x,y-4,135,12,{pageNumber:pageFor(index)});});
@@ -30,3 +30,4 @@ export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
   }
   checkAbort(signal);return doc;
 }
+
