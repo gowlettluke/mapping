@@ -21,7 +21,24 @@ export function validateLgas(collection){const f=collection?.features||[];if(!is
 export const lgas=signal=>cached('lgas',()=>queryArcgis(CONFIG.publicSources.lga,{fields:'lga',signal}).then(validateLgas));
 export const locator=signal=>cached('locator',()=>queryArcgis(CONFIG.publicSources.mainland,{where:"name = 'Queensland'",fields:'name,feature_type',simplify:.01,signal}).then(d=>{if(!d.features.length)throw new Error('Coastal state silhouette unavailable');return d;}));
 export async function majorNames(signal){return cached('majorNames',async()=>{const q=new URL(CONFIG.publicSources.majorRoads+'/query');Object.entries({where:"symbol_class IN ('Motorway','Highway') AND road_name_full IS NOT NULL",outFields:'road_name_full',returnGeometry:'false',returnDistinctValues:'true',orderByFields:'road_name_full',f:'json'}).forEach(([k,v])=>q.searchParams.set(k,v));const d=await json(q.href,{signal,timeout:8000}),names=(d.features||[]).map(f=>f.attributes.road_name_full).filter(Boolean);if(!names.length||d.exceededTransferLimit)throw new Error('Major-road classification is incomplete');return names;});}
-export async function loadPublic(extent,signal){const src=CONFIG.publicSources,jobs={outages:()=>json(src.outages,{signal}),manifest:()=>json(src.outageManifest,{signal}),traffic:()=>json(src.traffic,{signal}),coastline:()=>queryArcgis(src.coastline,{extent,fields:'feature_type',simplify:.0004,signal}),border:()=>queryArcgis(src.border,{extent,fields:'border_desc,state_desc',simplify:.0004,signal}),locator:()=>locator(signal),credits:()=>cached('credits',()=>json(src.topoMetadata+'?f=json',{signal}))};
+export async function majorRivers(extent,scopeText,signal,{read=json,query=queryArcgis}={}){
+  if(!String(scopeText||'').trim())return {type:'FeatureCollection',features:[]};
+  const q=new URL(CONFIG.publicSources.rivers+'/query');Object.entries({where:"hierarchy = 'Major' AND name IS NOT NULL",outFields:'name',returnGeometry:'false',returnDistinctValues:'true',resultRecordCount:'2000',geometry:extent.join(','),geometryType:'esriGeometryEnvelope',inSR:'4326',f:'json'}).forEach(([k,v])=>q.searchParams.set(k,v));
+  const d=await read(q.href,{signal,timeout:12000});if(!Array.isArray(d.features)||d.exceededTransferLimit)throw new Error('Major river names are incomplete');
+  const normalise=s=>' '+String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()+' ',scope=normalise(scopeText);
+  const names=[...new Set(d.features.map(f=>f.attributes?.name).filter(name=>{if(!name)return false;const stem=name.replace(/\s+(?:River|Creek|Channel)\b.*$/i,'');return stem.length>=3&&scope.includes(normalise(stem));}))];
+  if(!names.length)return {type:'FeatureCollection',features:[]};
+  const where="hierarchy = 'Major' AND name IN ("+names.map(name=>"'"+name.replace(/'/g,"''")+"'").join(',')+')';
+  return query(CONFIG.publicSources.rivers,{extent,where,fields:'name,hierarchy',simplify:.001,signal,timeout:12000});
+}
+export async function loadPublic(extent,signal,{cartography=false,riverScope=''}={}){const src=CONFIG.publicSources,jobs={outages:()=>json(src.outages,{signal}),manifest:()=>json(src.outageManifest,{signal}),traffic:()=>json(src.traffic,{signal}),coastline:()=>queryArcgis(src.coastline,{extent,fields:'feature_type',simplify:.0004,signal}),border:()=>queryArcgis(src.border,{extent,fields:'border_desc,state_desc',simplify:.0004,signal}),locator:()=>locator(signal),credits:()=>cached('credits',()=>json(src.topoMetadata+'?f=json',{signal}))};
+  if(cartography)Object.assign(jobs,{
+    // Current populated places only; homesteads and historical settlements
+    // would overwhelm a regional flood map. Hydrography is major channels only.
+    places:()=>queryArcgis(src.places,{extent,where:"type = 'POPL'",fields:'place_name,type',signal,timeout:12000}),
+    rivers:()=>majorRivers(extent,riverScope,signal),
+    islands:()=>queryArcgis(src.islands,{extent,fields:'name',simplify:.001,signal,timeout:12000})
+  });
   const entries=await Promise.allSettled(Object.entries(jobs).map(async([k,fn])=>[k,await fn()])),data={},notices=[];
   entries.forEach((r,i)=>{const key=Object.keys(jobs)[i];if(r.status==='fulfilled')data[key]=r.value[1];else notices.push(key+': '+errorText(r.reason));});return {data,notices};
 }

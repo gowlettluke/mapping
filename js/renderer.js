@@ -6,7 +6,8 @@ import {markerPositions} from './cameras.js';
 import {customers} from './report.js';
 import {layoutOutageLabels} from './map-labels.js';
 import {OUTAGE_BANDS,UNKNOWN_OUTAGE,outageAppearance,normaliseLabelMinimum} from './outage-style.js';
-import {floodLegendLayout,drawWarningFocus,warningFocusLegend} from './flood-display.js';
+import {floodLegendLayout,drawFloodLegend,drawWarningFocus,warningFocusLegend,mapReservations} from './flood-display.js';
+import {MAP_TOP,ROAD_STYLES,drawMapBase,drawWarningAreas,drawContextImage,drawRivers,drawPlaces,drawMapHeading,mapFooter,drawRoads} from './map-presentation.js';
 const CREDIT_FALLBACK='Esri, HERE, Garmin, Intermap, USGS, OpenStreetMap contributors and the GIS User Community';
 export function wrap(ctx,text,width){const result=[];let line='';for(const word of String(text).split(/\s+/)){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>width){result.push(line);line=word;}else line=candidate;}if(line)result.push(line);return result;}
 export async function basemap(extent,width,height,signal){
@@ -54,46 +55,57 @@ function outageLabels(ctx,entries,extent,width,height,locator,floodBoxes=[]){
 }
 function legend(ctx,width,y,radar,labelMinimum,floodKind){ctx.fillStyle='#333';ctx.font='12px Arial';if(floodKind)ctx.fillText(floodKind,16,y+24);else{ctx.fillText('Warning extent',46,y+24);ctx.fillStyle='#ffe26a';ctx.fillRect(16,y+13,24,14);ctx.strokeStyle='#935b14';ctx.strokeRect(16,y+13,24,14);}ctx.strokeStyle='#50595f';ctx.beginPath();ctx.moveTo(260,y+20);ctx.lineTo(295,y+20);ctx.stroke();ctx.fillStyle='#333';ctx.fillText('Coast / state border',304,y+24);ctx.strokeStyle='#8c949a';ctx.beginPath();ctx.moveTo(520,y+20);ctx.lineTo(555,y+20);ctx.stroke();ctx.fillText('LGA boundary',564,y+24);
   if(radar){ctx.font='bold 11px Arial';ctx.fillText('Radar rain rate (mm/h)',16,y+54);const start=190,cell=(width-start-16)/RADAR.length;for(let i=0;i<RADAR.length;i++){ctx.fillStyle=RADAR[i][1];ctx.fillRect(start+i*cell,y+39,cell+1,15);ctx.fillStyle='#555';ctx.font='9px Arial';ctx.textAlign='center';ctx.fillText(RADAR[i][0],start+(i+.5)*cell,y+68);}ctx.textAlign='left';}
-  else {ctx.font='12px Arial';ctx.fillText('Unplanned outages (customers)',16,y+54);const positions=[200,305,430,555,680];
+  else {ctx.font='12px Arial';ctx.fillText('Unplanned outages (customers)',16,y+54);const start=16+ctx.measureText('Unplanned outages (customers)').width+18,positions=Array.from({length:5},(_,i)=>start+i*125);
     [...OUTAGE_BANDS,UNKNOWN_OUTAGE].forEach((band,i)=>{const x=positions[i];ctx.fillStyle=band.fill;ctx.fillRect(x,y+41,22,15);ctx.strokeStyle=band.stroke;ctx.lineWidth=1;ctx.strokeRect(x,y+41,22,15);ctx.fillStyle='#333';ctx.fillText(band.label,x+29,y+54);});
-    ctx.strokeStyle='#bd202d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(16,y+83);ctx.lineTo(51,y+83);ctx.stroke();ctx.fillStyle='#333';ctx.fillText('Road closed',60,y+87);ctx.strokeStyle='#c47b19';ctx.beginPath();ctx.moveTo(240,y+83);ctx.lineTo(275,y+83);ctx.stroke();ctx.fillText('Road restricted / conditional access',284,y+87);ctx.fillStyle='#58636c';ctx.fillText(labelMinimum?'Number labels: '+labelMinimum.toLocaleString('en-AU')+'+ customers per outage':'Number labels: all reported counts',650,y+87);
+    ctx.strokeStyle=ROAD_STYLES.closed.colour;ctx.lineWidth=ROAD_STYLES.closed.width;ctx.beginPath();ctx.moveTo(16,y+83);ctx.lineTo(51,y+83);ctx.stroke();ctx.fillStyle='#333';ctx.fillText('Road closed',60,y+87);ctx.strokeStyle=ROAD_STYLES.restricted.colour;ctx.lineWidth=ROAD_STYLES.restricted.width;ctx.setLineDash(ROAD_STYLES.restricted.dash);ctx.beginPath();ctx.moveTo(240,y+83);ctx.lineTo(275,y+83);ctx.stroke();ctx.setLineDash([]);ctx.fillText('Road restricted / conditional access',284,y+87);ctx.fillStyle='#58636c';ctx.fillText(labelMinimum?'Number labels: '+labelMinimum.toLocaleString('en-AU')+'+ customers per outage':'Number labels: all reported counts',650,y+87);
   }
 }
-export function composeProducts({extent,background,warning,radar,tracking=null,mask,lgas,context,outages,roads,profile,active,generated,scopeLabel='',demo=false,outageLabelMinimum,floodDisplay=null,floodNotice=null}){
-  const width=warning.width,height=warning.height,p=transform(extent,width,height),flood=profile==='flooding',outline=flood?canvas(width,height):outlineCanvas(mask),probe=canvas(width,10).getContext('2d'),labelMinimum=normaliseLabelMinimum(outageLabelMinimum);probe.font='11px Arial';
-  const floodKind=flood?(floodDisplay?.kind||'Flood Warning / Watch'):null,floodLegend=active&&flood?floodLegendLayout(floodDisplay?.legend,width):{height:0};
-  const footer=['Generated '+aest(generated),demo?'Sources: synthetic test fixtures - not operational observations.':'Sources: Bureau of Meteorology warning/radar via authenticated ArcGIS; Queensland Government boundaries; Queensland power outage feed; QLDTraffic.',demo?'Background: synthetic demo geometry.':context.basemapUnavailable?'Background: Queensland boundary context.':'Basemap: '+(context.credits?.copyrightText||CREDIT_FALLBACK)];
-  const footerLines=footer.flatMap(t=>wrap(probe,t,width-30)),top=70,footerH=18+footerLines.length*16;
+export function composeProducts(snapshot){
+  const {extent,background,warning,radar,tracking=null,mask,lgas,context,outages,roads,profile,active,generated,scopeLabel='',demo=false,outageLabelMinimum,floodDisplay=null,floodNotice=null}=snapshot;
+  const width=warning.width,height=warning.height,p=transform(extent,width,height),flood=profile==='flooding',outline=flood?canvas(width,height):outlineCanvas(mask),probe=canvas(width,1).getContext('2d'),labelMinimum=normaliseLabelMinimum(outageLabelMinimum);probe.font='11px Arial';
+  const floodKind=flood?(floodDisplay?.kind||'Flood Warning'):null,floodLegend=active&&flood?floodLegendLayout(floodDisplay?.legend,width,floodKind):{height:0};
+  const footerFor=withRadar=>flood?mapFooter(probe,snapshot,width,{radar:withRadar}):['Generated '+aest(generated),demo?'Sources: synthetic test fixtures - not operational observations.':'Sources: Bureau of Meteorology warning/radar via authenticated ArcGIS; Queensland Government boundaries; Queensland power outage feed; QLDTraffic.',demo?'Background: synthetic demo geometry.':context.basemapUnavailable?'Background: Queensland boundary context.':'Basemap: '+(context.credits?.copyrightText||CREDIT_FALLBACK)];
+  const top=flood?MAP_TOP:70;
   const make=(withRadar)=>{
-    const legendH=(withRadar?89:112)+floodLegend.height,c=canvas(width,top+height+legendH+footerH),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.font='bold 25px Arial';ctx.fillStyle='#17222c';ctx.fillText((active?(flood?'Queensland '+floodKind:'Queensland '+CONFIG.profiles[profile].label+' Warning'):'Queensland Statewide')+' + '+(withRadar?'Radar':'Infrastructure Impacts'),16,29);ctx.font='13px Arial';ctx.fillStyle='#58636c';ctx.fillText(scopeLabel||(active?'Current warning extent with regional context':'No active warning detected in Queensland'),16,53);
-    ctx.save();ctx.translate(0,top);ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();ctx.drawImage(background,0,0,width,height);
-    features(ctx,lgas,p,{stroke:'rgba(100,108,114,.48)',width:1});features(ctx,context.coastline,p,{stroke:'#4a555c',width:1.2});features(ctx,context.border,p,{stroke:'#34424b',width:1.8});
-    if(active&&(extent[2]-extent[0])<900000)labels(ctx,lgas,p,width,height);
-    ctx.drawImage(warning,0,0);if(withRadar&&radar){ctx.imageSmoothingEnabled=false;ctx.drawImage(radar,0,0,width,height);ctx.imageSmoothingEnabled=true;}if(withRadar&&tracking)ctx.drawImage(tracking,0,0,width,height);
+    const footerLines=footerFor(withRadar).flatMap(t=>wrap(probe,t,width-32)),footerH=20+footerLines.length*16;
+    const legendH=(withRadar?89:112)+floodLegend.height,c=canvas(width,top+height+legendH+footerH),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+    if(flood)drawMapHeading(ctx,snapshot,withRadar?'Warning areas and radar':'Road conditions and power outages',width);
+    else{ctx.font='bold 25px Arial';ctx.fillStyle='#17222c';ctx.fillText((active?'Queensland '+CONFIG.profiles[profile].label+' Warning':'Queensland Statewide')+' + '+(withRadar?'Radar':'Infrastructure Impacts'),16,29);ctx.font='13px Arial';ctx.fillStyle='#58636c';ctx.fillText(scopeLabel||(active?'Current warning extent with regional context':'No active warning detected in Queensland'),16,53);}
+    ctx.save();ctx.translate(0,top);ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();
+    if(flood){drawMapBase(ctx,snapshot,width,height);drawWarningAreas(ctx,snapshot,width,height);drawRivers(ctx,snapshot,width,height);}
+    else{ctx.drawImage(background,0,0,width,height);features(ctx,lgas,p,{stroke:'rgba(100,108,114,.48)',width:1});features(ctx,context.coastline,p,{stroke:'#4a555c',width:1.2});features(ctx,context.border,p,{stroke:'#34424b',width:1.8});if(active&&(extent[2]-extent[0])<900000)labels(ctx,lgas,p,width,height);ctx.drawImage(warning,0,0);}
+    if(withRadar&&radar){ctx.imageSmoothingEnabled=false;ctx.drawImage(radar,0,0,width,height);ctx.imageSmoothingEnabled=true;}if(withRadar&&tracking)ctx.drawImage(tracking,0,0,width,height);
     if(withRadar&&!flood)ctx.drawImage(outline,0,0);
-    if(!withRadar){const counts=[];for(const f of outages?.features||[]){const prop=f.properties||{};if(String(prop.outage_type).toLowerCase()!=='unplanned'||!f.geometry)continue;const count=customers(prop),appearance=outageAppearance(count),polygon=['Polygon','MultiPolygon'].includes(f.geometry.type);ctx.beginPath();path(ctx,f.geometry,p);ctx.fillStyle=appearance.fill;ctx.strokeStyle=appearance.stroke;ctx.lineWidth=appearance.lineWidth;if(polygon){ctx.fill('evenodd');ctx.stroke();}
-        const b=bounds(f.geometry);if(!b)continue;const pos=p([(b[0]+b[2])/2,(b[1]+b[3])/2]);if(!polygon){ctx.fillStyle=appearance.pointFill;ctx.beginPath();ctx.arc(...pos,appearance.radius,0,Math.PI*2);ctx.fill();ctx.stroke();}
-        if(count!==null&&count>=labelMinimum&&pos[0]>=0&&pos[0]<=width&&pos[1]>=0&&pos[1]<=height)counts.push({anchor:pos,text:count.toLocaleString('en-AU')});
+    let counts=[];
+    if(!withRadar){const infrastructure=flood?canvas(width,height):null,ic=infrastructure?infrastructure.getContext('2d'):ctx;
+      for(const f of outages?.features||[]){const prop=f.properties||{};if(String(prop.outage_type).toLowerCase()!=='unplanned'||!f.geometry)continue;const count=customers(prop),appearance=outageAppearance(count),polygon=['Polygon','MultiPolygon'].includes(f.geometry.type);ic.beginPath();path(ic,f.geometry,p);ic.fillStyle=appearance.fill;ic.strokeStyle=appearance.stroke;ic.lineWidth=appearance.lineWidth;if(polygon){ic.fill('evenodd');ic.stroke();}
+        const b=bounds(f.geometry);if(!b)continue;const point=[(b[0]+b[2])/2,(b[1]+b[3])/2],pos=p(point);if(!polygon){ic.fillStyle=appearance.pointFill;ic.beginPath();ic.arc(...pos,appearance.radius,0,Math.PI*2);ic.fill();ic.stroke();}
+        if(count!==null&&count>=labelMinimum&&pos[0]>=0&&pos[0]<=width&&pos[1]>=0&&pos[1]<=height&&(!flood||!active||maskContains(mask,point)))counts.push({anchor:pos,text:count.toLocaleString('en-AU')});
       }
+      drawRoads(ic,roads,p);
+      if(infrastructure)drawContextImage(ctx,snapshot,infrastructure,width,height);
       if(!flood)ctx.drawImage(outline,0,0);
-      for(const r of roads){ctx.beginPath();path(ctx,r.geometry,p);ctx.strokeStyle=r.condition==='closed'?'#bd202d':'#c47b19';ctx.lineWidth=r.condition==='closed'?3:2.5;const point=r.geometry.type==='Point';if(point){const pos=p(r.geometry.coordinates);ctx.arc(...pos,5,0,Math.PI*2);}ctx.stroke();}
-      outageLabels(ctx,counts,extent,width,height,context.locator,flood?floodDisplay?.labelBoxes:[]);
     }
-    if(flood)drawWarningFocus(ctx,{extent,active,floodNotice},width,height);
-    if(flood&&floodDisplay?.labels)ctx.drawImage(floodDisplay.labels,0,0);
-    annotations(ctx,extent,width,height,context.locator);if(demo){ctx.font='bold 38px Arial';ctx.fillStyle='rgba(145,25,35,.8)';ctx.textAlign='center';ctx.fillText('DEMO - SYNTHETIC DATA',width/2,60);ctx.textAlign='left';}ctx.strokeStyle='#61717b';ctx.lineWidth=1;ctx.strokeRect(.5,.5,width-1,height-1);ctx.restore();
-    if(floodLegend.height){ctx.fillStyle='#333';ctx.font='bold 12px Arial';ctx.fillText(floodKind+' — '+(floodDisplay?.legend?'source legend':'source legend unavailable'),16,top+height+20);if(floodDisplay?.legend)ctx.drawImage(floodDisplay.legend,16,top+height+27,floodLegend.width,floodLegend.imageHeight);}
+    if(flood)drawWarningFocus(ctx,snapshot,width,height);
+    if(flood&&floodDisplay?.labels)drawContextImage(ctx,snapshot,floodDisplay.labels,width,height,.6);
+    const townBoxes=flood?drawPlaces(ctx,snapshot,width,height,{reserved:[...mapReservations(width,height,context.locator),...(floodDisplay?.labelBoxes||[])]}):[];
+    if(!withRadar)outageLabels(ctx,counts,extent,width,height,context.locator,[...(flood?floodDisplay?.labelBoxes||[]:[]),...townBoxes]);
+    annotations(ctx,extent,width,height,context.locator);if(demo){ctx.font='bold 30px Arial';ctx.fillStyle='rgba(145,25,35,.8)';ctx.textAlign='center';ctx.fillText('DEMO - SYNTHETIC DATA',width/2,48);ctx.textAlign='left';}ctx.strokeStyle='#9aa9b3';ctx.lineWidth=1;ctx.strokeRect(.5,.5,width-1,height-1);ctx.restore();
+    if(floodLegend.height)drawFloodLegend(ctx,floodDisplay?.legend,width,top+height,floodKind);
     const legendY=top+height+floodLegend.height;legend(ctx,width,legendY,withRadar,labelMinimum,floodKind);
     if(active&&floodNotice?.scopeGeometries?.length){ctx.fillStyle='#fff';ctx.fillRect(12,legendY+8,235,27);warningFocusLegend(ctx,16,legendY+20,floodKind);}
-    ctx.font='11px Arial';ctx.fillStyle='#4d5962';footerLines.forEach((s,i)=>ctx.fillText(s,15,top+height+legendH+17+i*16));return c;
+    ctx.font='11px Arial';ctx.fillStyle='#4d5962';footerLines.forEach((line,i)=>ctx.fillText(line,16,top+height+legendH+17+i*16));return c;
   };
   return {radar:make(true),infrastructure:make(false),outline};
 }
 export async function exportProducts(products){return {radar:await canvasBlob(products.radar),infrastructure:await canvasBlob(products.infrastructure)};}
-export function cameraMap(snapshot,cameras,width=1450,height=Math.round(width*(snapshot.extent[3]-snapshot.extent[1])/(snapshot.extent[2]-snapshot.extent[0]))){const c=canvas(width,height),ctx=c.getContext('2d');ctx.drawImage(snapshot.background,0,0,width,height);ctx.save();ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();ctx.globalAlpha=.8;ctx.drawImage(snapshot.warning,0,0,width,height);ctx.globalAlpha=1;
-  if(snapshot.floodDisplay?.labels)ctx.drawImage(snapshot.floodDisplay.labels,0,0,width,height);
+export function cameraMap(snapshot,cameras,width=1450,height=Math.round(width*(snapshot.extent[3]-snapshot.extent[1])/(snapshot.extent[2]-snapshot.extent[0]))){const c=canvas(width,height),ctx=c.getContext('2d'),flood=snapshot.profile==='flooding';ctx.save();ctx.beginPath();ctx.rect(0,0,width,height);ctx.clip();
+  if(flood){drawMapBase(ctx,snapshot,width,height);drawWarningAreas(ctx,snapshot,width,height);drawRivers(ctx,snapshot,width,height);}else{ctx.drawImage(snapshot.background,0,0,width,height);ctx.globalAlpha=.8;ctx.drawImage(snapshot.warning,0,0,width,height);ctx.globalAlpha=1;}
+  if(snapshot.floodDisplay?.labels)drawContextImage(ctx,snapshot,snapshot.floodDisplay.labels,width,height,.6);
   if(drawWarningFocus(ctx,snapshot,width,height)){ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(12,12,220,32);warningFocusLegend(ctx,23,28,snapshot.floodDisplay?.kind);}
-  const p=transform(snapshot.extent,width,height);ctx.font='bold 16px Arial';ctx.textAlign='center';const positions=markerPositions(cameras.map(c=>p(c.point)),width,height);
+  const p=transform(snapshot.extent,width,height),positions=markerPositions(cameras.map(c=>p(c.point)),width,height);
+  if(flood){const sx=width/snapshot.warning.width,sy=height/snapshot.warning.height,labelBoxes=(snapshot.floodDisplay?.labelBoxes||[]).map(b=>({x:b.x*sx,y:b.y*sy,width:b.width*sx,height:b.height*sy}));drawPlaces(ctx,snapshot,width,height,{reserved:[...mapReservations(width,height,snapshot.context?.locator),...labelBoxes,...positions.map(([x,y])=>({x:x-16,y:y-16,width:32,height:32})),{x:12,y:12,width:220,height:32}]});}
+  ctx.font='bold 16px Arial';ctx.textAlign='center';
   cameras.forEach((camera,i)=>{const [ax,ay]=p(camera.point),[x,y]=positions[i];ctx.strokeStyle='#6a7b86';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,13,0,Math.PI*2);ctx.fillStyle='#1c4c72';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.fillText(String(i+1),x,y+5);camera.marker={x,y};});
   ctx.textAlign='left';annotations(ctx,snapshot.extent,width,height,snapshot.context.locator);ctx.restore();return c;
 }
