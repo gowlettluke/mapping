@@ -4,10 +4,10 @@ import {floodLabelBoxes,floodLegendLayout,drawWarningFocus,warningFocusLegend} f
 import {layoutOutageLabels} from '../js/map-labels.js';
 import {projectedBounds} from '../js/geometry.js';
 
-test('the focus outline traces only selected notice geometry and identifies the selected warning/watch',()=>{
-  const strokes=[],labels=[];let points=[],dash=[];const ctx={save(){},restore(){},beginPath(){points=[];},closePath(){},moveTo:(...point)=>points.push(point),lineTo:(...point)=>points.push(point),setLineDash:value=>{dash=value;},stroke(){strokes.push({points:[...points],colour:this.strokeStyle,width:this.lineWidth,dash});},fillText:value=>labels.push(value)},geometry={type:'Polygon',coordinates:[[[150,-28],[151,-28],[151,-27],[150,-27],[150,-28]]]},snapshot={active:true,extent:projectedBounds([150,-28,154,-24]),floodNotice:{scopeGeometries:[geometry]}};
-  assert.equal(drawWarningFocus(ctx,snapshot,1000,800),true);assert.equal(strokes.length,2);assert.equal(strokes[1].colour,'#173f63');assert.equal(strokes[1].width,3);assert.deepEqual(strokes[1].dash,[12,7]);assert.ok(strokes.every(stroke=>stroke.points.every(([x])=>x<=251)),'A warning farther east receives no selection outline.');
-  warningFocusLegend(ctx,10,20,'Flood Warning');warningFocusLegend(ctx,10,40,'Flood Watch');assert.deepEqual(labels,['Selected warning','Selected watch']);const count=strokes.length;assert.equal(drawWarningFocus(ctx,{...snapshot,active:false},1000,800),false);assert.equal(drawWarningFocus(ctx,{...snapshot,floodNotice:null},1000,800),false);assert.equal(strokes.length,count);
+test('the focus outline draws the selected union and identifies warning/watch',()=>{
+  const strokes=[],labels=[];let points=[],dash=[];const ctx={save(){},restore(){},beginPath(){points=[];},closePath(){},moveTo:(...point)=>points.push(point),lineTo:(...point)=>points.push(point),setLineDash:value=>{dash=value;},stroke(){strokes.push({points:[...points],colour:this.strokeStyle,width:this.lineWidth,dash});},fillText:value=>labels.push(value)},snapshot={active:true};
+  const pixels=()=>Uint8Array.from([0,0,0,0,1,1,0,1,1]);assert.equal(drawWarningFocus(ctx,snapshot,3,3,{pixels}),true);assert.equal(strokes.length,2);assert.equal(strokes[1].colour,'#173f63');assert.equal(strokes[1].width,2.5);assert.deepEqual(strokes[1].dash,[]);assert.ok(strokes.every(stroke=>stroke.points.length===8),'Only the four outside edges are drawn.');
+  warningFocusLegend(ctx,10,20,'Flood Warning');warningFocusLegend(ctx,10,40,'Flood Watch');assert.deepEqual(labels,['Selected warning','Selected watch']);const count=strokes.length;assert.equal(drawWarningFocus(ctx,{active:false},3,3),false);assert.equal(drawWarningFocus(ctx,{active:true,floodNotice:null},3,3),false);assert.equal(strokes.length,count);
 });
 
 test('native flood name footprints preserve separate names and keep outage labels clear',()=>{
@@ -24,5 +24,5 @@ test('blank and opaque map substitutes cannot be drawn as flood names',()=>{
 });
 test('native flood legend keeps its aspect ratio within the export and reserves explicit unavailable space',()=>{
   const layout=floodLegendLayout({width:300,height:120},1500);assert.equal(layout.width/layout.imageHeight,2.5);assert.ok(layout.height>=layout.imageHeight+30);
-  const tall=floodLegendLayout({width:1000,height:1800},1500);assert.ok(tall.imageHeight<=400&&tall.width<=1468);assert.equal(floodLegendLayout(null,1500).height,35);
+  const tall=floodLegendLayout({width:1000,height:1800},1500);assert.ok(tall.imageHeight<=180&&tall.width<=1468);assert.equal(floodLegendLayout(null,1500).height,61);assert.equal(floodLegendLayout(null,1500,'Flood Watch').height,35);
 });

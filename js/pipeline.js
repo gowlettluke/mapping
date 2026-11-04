@@ -28,7 +28,7 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
   if(floodSelection){active=true;extent=fitExtent(floodSelection.extent,width,height,{minimumKm:minimumRegionalKm,padding});scopeMasks=[];}
   else if(profile==='flooding'){active=false;extent=fitExtent(projectedBounds(CONFIG.rendering.qld),width,height);}
   else {onProgress('Detecting the current '+spec.label.toLowerCase()+' warning...');const initial=await scan(connection,spec.warning,spec.titles,projectedBounds(CONFIG.rendering.qld),boundary,...detection,signal);active=initial.active;extent=active?fitExtent(initial.extent,width,height,{minimumKm:minimumRegionalKm,padding}):fitExtent(projectedBounds(CONFIG.rendering.qld),width,height);}
-  onProgress('Loading shared infrastructure data and map background...');const [{data:context,notices},background]=await Promise.all([loadPublic(geographicBounds(extent),signal),basemap(extent,width,height,signal)]);checkAbort(signal);
+  onProgress('Loading shared infrastructure data and map background...');const [{data:context,notices},background]=await Promise.all([loadPublic(geographicBounds(extent),signal,{cartography:Boolean(floodSelection),riverScope:[floodSelection?.title,...(floodSelection?.catchmentNames||[])].join(' ')}),basemap(extent,width,height,signal)]);checkAbort(signal);
   if(background.failed){notices.push(background.failed+' of '+background.total+' background tiles were unavailable.');if(background.failed===background.total){context.basemapUnavailable=true;const ctx=background.canvas.getContext('2d'),p=transform(extent,width,height);ctx.fillStyle='#f2eee5';for(const f of boundary.features){ctx.beginPath();path(ctx,f.geometry,p);ctx.fill('evenodd');}}}
   onProgress('Rendering the same warning snapshot for both JPEG maps...');let [weather,radar]=await Promise.all([
     scan(connection,floodSelection?.names||spec.warning,floodSelection?.titles||spec.titles,extent,boundary,width,height,signal),connection.render('radar',extent,width,height,CONFIG.radar.names,CONFIG.radar.titles,signal)
@@ -54,7 +54,7 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
       labels=catchmentFloodLabels(displayMask,currentReferences.length?{features:currentReferences}:refs,{reserved:mapReservations(width,height,context.locator)});
       if(!labels.boxes.length)notices.push('Flood area names could not be loaded.');
     }
-    if(!legend)notices.push('The source flood legend could not be loaded.');
+    if(!legend&&kind==='Flood Watch')notices.push('The source flood watch legend could not be loaded.');
     floodDisplay={kind,labels:labels.image,labelBoxes:labels.boxes,labelMode:labels.mode,legend};
   }
   let trackingImage=null;if(tracking&&active&&spec.tracking.length){try{trackingImage=await connection.render('warning',extent,width,height,spec.tracking,[],signal);}catch{notices.push('Storm tracking was unavailable; it was omitted.');}}

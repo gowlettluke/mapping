@@ -349,3 +349,37 @@ All 54 internal/external links have valid destinations and omit credentials;
 text stays inside page bounds and camera/gauge sections remain in separate
 documents. These fixtures use synthetic observations. The private live WMS,
 camera permissions and gauge feed still require a signed-in deployment check.
+
+## Flood map clarity — 5 November 2026
+
+All 186 tests and 48 JavaScript/asset checks pass. Presentation changes keep
+the selected notice's existing extent, warning image and analysis mask. The
+single navy focus outline follows the rasterised union of the notice's
+geometries, removing shared internal edges while preserving holes and separate
+parts. Nearby warning imagery and names remain visible at lower opacity;
+selected imagery retains its original opacity. Neither fading nor land-clipping
+changes report, camera or gauge selection.
+
+The native flood legend remains preferred. Flood-warning maps have a compact
+standard BoM key verified from the published legend in FOI30-167 released
+documents set 3, PDF page 169. Watch maps do not borrow warning categories when
+their own key is unavailable. Gauge status and counts are independently derived
+from the reported station classification, never the warning-area colour or
+numeric water height. Flow-order caveats remain in the index/diagram output.
+
+Optional public context queries add current populated-place labels and named
+major channels in the selected warning. Source queries were checked for
+browser CORS and pagination; broad hydrography is deliberately avoided. LGA
+strokes are clipped to verified mainland/island land polygons. Closed roads
+use white-cased dark red; restrictions use thinner neutral dashes. Titles lead
+with the geographic area and purpose, with an explicit map-generation time.
+
+Native-canvas checks used public Barcoo/Thomson catchment and station geography
+with synthetic readings, roads and outages. Full-size gauge, infrastructure,
+radar and camera maps were inspected. Pixel checks confirm no internal focus
+seam, retained neighbouring warnings, original selected-source opacity,
+landward-only LGA strokes, unchanged source imagery and correct header-adjusted
+PDF marker positions. Separate camera and gauge PDFs were generated through
+the production exporters; their links and page bounds were checked. No private
+observations or signed-in WMS requests are committed; that live-source check
+remains dependent on the organisation's ArcGIS session.

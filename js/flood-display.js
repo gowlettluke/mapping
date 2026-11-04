@@ -1,20 +1,18 @@
 import {canvas,clean} from './utils.js';
 import {bounds,overlap,projectedBounds,path,transform} from './geometry.js';
+import {selectionPixels,boundarySegments} from './map-presentation.js';
 
 const intersects=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
-export function drawWarningFocus(ctx,snapshot,width,height){
-  const geometries=snapshot.floodNotice?.scopeGeometries;if(!snapshot.active||!geometries?.length)return false;
-  const project=transform(snapshot.extent,width,height);ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
-  // Trace the notice geometry, not its coloured/hatch pixels. Native warning
-  // colours stay intact and unrelated warning areas get no focus outline.
-  for(const [colour,lineWidth,dash]of [['rgba(255,255,255,.96)',7,[]],['#173f63',3,[12,7]]]){
-    ctx.strokeStyle=colour;ctx.lineWidth=lineWidth;ctx.setLineDash(dash);
-    for(const geometry of geometries){ctx.beginPath();path(ctx,geometry,project);ctx.stroke();}
+export function drawWarningFocus(ctx,snapshot,width,height,{pixels=selectionPixels}={}){
+  const inside=pixels(snapshot,width,height);if(!inside)return false;
+  const edges=boundarySegments(inside,width,height);ctx.save();ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);
+  for(const [colour,lineWidth]of [['rgba(255,255,255,.96)',6],['#173f63',2.5]]){
+    ctx.strokeStyle=colour;ctx.lineWidth=lineWidth;ctx.beginPath();for(const [x,y,x1,y1]of edges){ctx.moveTo(x,y);ctx.lineTo(x1,y1);}ctx.stroke();
   }ctx.restore();return true;
 }
 export function warningFocusLegend(ctx,x,y,kind='Flood Warning'){
   ctx.save();ctx.lineWidth=7;ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+28,y);ctx.stroke();
-  ctx.strokeStyle='#173f63';ctx.lineWidth=3;ctx.setLineDash([12,7]);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#333';ctx.font='12px Arial';ctx.textAlign='left';ctx.fillText(kind==='Flood Watch'?'Selected watch':'Selected warning',x+37,y+4);ctx.restore();
+  ctx.strokeStyle='#173f63';ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.stroke();ctx.fillStyle='#333';ctx.font='12px Arial';ctx.textAlign='left';ctx.fillText(kind==='Flood Watch'?'Selected watch':'Selected warning',x+37,y+4);ctx.restore();
 }
 export function mapReservations(width,height,locator){const boxes=[{x:12,y:height-57,width:220,height:45}];if(locator?.features?.length)boxes.push({x:width-153,y:12,width:141,height:182});return boxes;}
 
@@ -63,4 +61,30 @@ export function catchmentFloodLabels(mask,collection,{reserved=[]}={}){
   return {image:c,boxes:placed,mode:'catchments'};
 }
 
-export function floodLegendLayout(image,width){if(!image)return {height:35};const scale=Math.min(1.5,(width-32)/image.width,400/image.height);return {height:Math.ceil(image.height*scale)+34,width:image.width*scale,imageHeight:image.height*scale};}
+// Standard key verified against BoM's published "Flood Warning Extent and
+// Severity" legend (FOI30-167 released documents set 3, PDF page 169).
+// These are warning-AREA categories, never inferred gauge classifications.
+export const BOM_WARNING_KEY=[
+  {label:'Major',stroke:'#e60000',fill:'#ffe5e5',pattern:'diagonal'},
+  {label:'Moderate',stroke:'#ffaa00',fill:'#fff0bf',pattern:'vertical'},
+  {label:'Minor',stroke:'#38a800',fill:'#e4f3de',pattern:'horizontal'},
+  {label:'Generalised',stroke:'#c8c3ff',fill:'#efedff',pattern:'horizontal'},
+  {label:'Below minor',stroke:'#00b8df',fill:'#effcff',pattern:'wave'},
+  {label:'Final warning',stroke:'#b4b44d',fill:'#f2f2e1',pattern:null}
+];
+export function floodLegendLayout(image,width,kind='Flood Warning'){
+  if(!image){const columns=Math.max(1,Math.floor((width-32)/180));return {height:kind==='Flood Warning'?33+Math.ceil(BOM_WARNING_KEY.length/columns)*28:35,columns,standard:kind==='Flood Warning'};}
+  const scale=Math.min(1.25,(width-32)/image.width,180/image.height);return {height:Math.ceil(image.height*scale)+34,width:image.width*scale,imageHeight:image.height*scale};
+}
+export function drawFloodLegend(ctx,image,width,y,kind='Flood Warning'){
+  const layout=floodLegendLayout(image,width,kind);ctx.save();ctx.textAlign='left';ctx.font='bold 12px Arial';ctx.fillStyle='#334552';ctx.fillText('BoM '+kind.toLowerCase()+' areas'+(!image&&layout.standard?' — standard key':''),16,y+19);
+  if(image)ctx.drawImage(image,16,y+27,layout.width,layout.imageHeight);
+  else if(layout.standard)BOM_WARNING_KEY.forEach((entry,i)=>{
+    const x=16+(i%layout.columns)*(width-32)/layout.columns,sy=y+30+Math.floor(i/layout.columns)*28,w=27,h=17;ctx.fillStyle=entry.fill;ctx.fillRect(x,sy,w,h);ctx.save();ctx.beginPath();ctx.rect(x,sy,w,h);ctx.clip();ctx.strokeStyle=entry.stroke;ctx.globalAlpha=.65;ctx.lineWidth=.8;ctx.beginPath();
+    if(entry.pattern==='vertical')for(let dx=4;dx<w;dx+=5){ctx.moveTo(x+dx,sy);ctx.lineTo(x+dx,sy+h);}
+    if(entry.pattern==='horizontal')for(let dy=4;dy<h;dy+=5){ctx.moveTo(x,sy+dy);ctx.lineTo(x+w,sy+dy);}
+    if(entry.pattern==='diagonal')for(let dx=-h;dx<w;dx+=6){ctx.moveTo(x+dx,sy+h);ctx.lineTo(x+dx+h,sy);}
+    if(entry.pattern==='wave')for(let dy=1;dy<h;dy+=6){ctx.moveTo(x,sy+dy);for(let dx=0;dx<=w;dx+=3)ctx.lineTo(x+dx,sy+dy+(Math.floor(dx/3)%2?3:0));}
+    ctx.stroke();ctx.restore();ctx.strokeStyle=entry.stroke;ctx.lineWidth=1.4;ctx.strokeRect(x,sy,w,h);ctx.fillStyle='#334552';ctx.font='12px Arial';ctx.fillText(entry.label,x+35,sy+13);
+  });else{ctx.font='12px Arial';ctx.fillStyle='#586875';ctx.fillText('Source key unavailable — see the BoM warning.',250,y+19);}ctx.restore();return layout.height;
+}

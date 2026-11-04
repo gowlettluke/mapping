@@ -26,13 +26,13 @@ test('labels near each corner remain inside the map and clear of the scale bar a
 
 function fakeCanvas(width,height){
   const images=[],texts=[],arcs=[],fills=[],ctx={drawImage:(...args)=>images.push(args[0]),fillText:value=>texts.push(String(value)),measureText:value=>({width:String(value).length*9}),createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),arc:(x,y,r)=>arcs.push({x,y,r,fill:ctx.fillStyle}),fillRect:(x,y,width,height)=>fills.push({x,y,width,height,fill:ctx.fillStyle})};
-  for(const method of ['save','restore','strokeRect','beginPath','closePath','rect','clip','translate','moveTo','lineTo','fill','stroke','strokeText','putImageData'])ctx[method]=()=>{};
+  for(const method of ['save','restore','strokeRect','beginPath','closePath','rect','clip','translate','moveTo','lineTo','fill','stroke','strokeText','putImageData','setLineDash'])ctx[method]=()=>{};
   return {width,height,images,texts,arcs,fills,getContext:()=>ctx};
 }
 setCanvasFactory(fakeCanvas);
 const collection=features=>({type:'FeatureCollection',features});
 function fixture(){const width=400,height=300;return {
-  extent:projectedBounds([150,-28,154,-24]),background:{},warning:{width,height},radar:{},tracking:{},mask:{width,height,visible:new Uint8Array(width*height)},
+  extent:projectedBounds([150,-28,154,-24]),background:{},warning:{width,height},radar:{},tracking:{},mask:{width,height,extent:projectedBounds([150,-28,154,-24]),visible:new Uint8Array(width*height).fill(1)},
   lgas:collection([]),context:{locator:collection([])},outages:collection([]),roads:[],profile:'thunderstorm',active:true,generated:new Date('2026-11-02T07:00:00Z')
 };}
 test('storm tracking overlays radar only and remains optional when the radar image is unavailable',()=>{
@@ -45,13 +45,13 @@ test('storm tracking overlays radar only and remains optional when the radar ima
 test('flood exports retain native polygons and source labels without the extra brown mask tracing',()=>{
   const input=fixture();input.profile='flooding';input.floodDisplay={kind:'Flood Warning',labels:{},labelBoxes:[],legend:{width:200,height:70}};
   const products=composeProducts(input);
-  for(const output of [products.radar,products.infrastructure]){assert.equal(output.images.filter(i=>i===input.warning).length,1);assert.equal(output.images.includes(products.outline),false);assert.ok(output.images.includes(input.background));assert.ok(output.images.includes(input.floodDisplay.labels));assert.ok(output.images.includes(input.floodDisplay.legend));assert.equal(output.texts.includes('Warning extent'),false);assert.ok(output.texts.includes('Flood Warning — source legend'));}
+  for(const output of [products.radar,products.infrastructure]){assert.equal(output.images.filter(i=>i===input.warning).length,1);assert.equal(output.images.includes(products.outline),false);assert.ok(output.images.includes(input.background));assert.ok(output.images.includes(input.floodDisplay.labels));assert.ok(output.images.includes(input.floodDisplay.legend));assert.equal(output.texts.includes('Warning extent'),false);assert.ok(output.texts.includes('BoM flood warning areas'));}
   const storm=composeProducts({...input,profile:'thunderstorm',floodDisplay:null});assert.ok(storm.radar.images.includes(storm.outline));assert.ok(storm.infrastructure.images.includes(storm.outline));
 });
 test('flood names render above infrastructure while outage counts keep clear of their reserved space',()=>{
   const input=fixture();input.profile='flooding';const reserved={x:160,y:115,width:120,height:50};input.floodDisplay={kind:'Flood Watch',labels:{},labelBoxes:[reserved],legend:null};
   input.outages=collection([{type:'Feature',geometry:{type:'Point',coordinates:[152,-26]},properties:{outage_type:'unplanned',affected_customers:1009}}]);
-  const result=composeProducts(input),output=result.infrastructure;assert.equal(output.images.at(-1),input.floodDisplay.labels);assert.ok(output.texts.includes('1,009'));assert.ok(output.texts.includes('Flood Watch — source legend unavailable'));assert.equal(output.texts.includes('Warning extent'),false);
+  const result=composeProducts(input),output=result.infrastructure;assert.equal(output.images.at(-1),input.floodDisplay.labels);assert.ok(output.texts.includes('1,009'));assert.ok(output.texts.includes('Source key unavailable — see the BoM warning.'));assert.equal(output.texts.includes('Warning extent'),false);
   const labels=output.fills.filter(b=>b.height===26);assert.equal(labels.length,1);const p=labels[0];assert.equal(overlaps(p,reserved),false);
 });
 test('outage labels default to 100 customers and omit smaller, unknown or planned counts',()=>{
