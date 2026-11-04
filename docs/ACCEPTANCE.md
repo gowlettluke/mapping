@@ -437,3 +437,32 @@ production PDF exporter produced all/24h/verified-1h/verified-24h reports with
 8/6/2/4 synthetic photographs respectively. Text stays within page bounds and
 all 106 links have valid destinations. Original older and unverified timestamps
 remain labelled; no live or private camera images are committed.
+
+## Gauge order review — 5 November 2026
+
+The static reference now matches 1,473 of the 1,945 public catalogue locations,
+up from 1,172, retaining every former matched station. BoM's dated station
+directory supplies missing identities with a station-ID and 250-metre location
+check. Exact named network sites provide a second conservative identity check.
+All plausible named-channel placements within the existing 120-metre tolerance
+must agree on each published downstream relationship. Three former relationships
+were removed under this stricter check; a fourth linked two source records now
+matched to the same network gauge position. One cyclic match remains excluded.
+Confirmed branch connections retain their own reaches without an unconfirmed
+label caused solely by splitting the layout into chains.
+
+The 301 additional matched sites include Blackall Alert, Upper Monal Alert,
+Powell Creek and Westerton–Tonkoro Road. Of these additions, 283 have an explicit
+relationship to another reference station and 18 remain isolated. Across 14
+captured BoM warning areas using public catalogue locations, unconfirmed entries
+fall from 148 to 70. Boyne/Burnett falls from 35 to 17; Barcoo/Thomson falls from
+17 to 12. These are public test selections, not a measured match rate for the
+private QFD feed. Missing/relocated sites and indeterminate connections remain
+visible with their readings and graphs.
+
+All 205 JavaScript tests, 12 Python builder tests and 49 JavaScript/asset checks
+pass. Native-canvas and production PDF checks cover three public warning areas
+with 45, 61 and 60 stations and synthetic observations. Every diagram card stays
+within its page at a minimum height of 62 pixels. All 762 PDF links have valid
+destinations, text stays within page bounds, and graph pages retain four images
+per page. No live readings or private station data enter the reference or tests.

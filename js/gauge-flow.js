@@ -54,10 +54,12 @@ export function orderGaugesByFlow(gauges,reference=null){
     const namedStation={...station,river:riverValue(station.river)||sourceRiver(gauge)||'Unnamed tributary'};matched.set(gauge,namedStation);const group=wordKey(station.basin)+'|'+wordKey(namedStation.river);if(!buckets.has(group))buckets.set(group,[]);buckets.get(group).push(gauge);
   }
   const riverBasins=new Map();for(const station of matched.values()){const river=wordKey(station.river);if(!riverBasins.has(river))riverBasins.set(river,new Set());riverBasins.get(river).add(wordKey(station.basin));}
+  const selectedIds=new Set([...matched.values()].map(station=>stationKey(station.id))),connectedIds=new Set();
+  for(const station of matched.values())for(const target of station.downstream){const id=stationKey(target);if(selectedIds.has(id)){connectedIds.add(stationKey(station.id));connectedIds.add(id);}}
   const output=[];for(const [key,rows]of [...buckets].sort(([a],[b])=>a.localeCompare(b))){
     const first=matched.get(rows[0]),chains=directedChains(rows,matched);if(!chains){unknown.push(...rows);continue;}
-    chains.forEach((chain,index)=>{const split=chains.length>1,uncertain=split&&chain.length===1,group=first.river+(riverBasins.get(wordKey(first.river)).size>1&&first.basin?' ('+first.basin+')':'')+(split?' — reach '+(index+1):'');
-      for(const gauge of chain)output.push({...gauge,river:first.river,basin:first.basin,flowGroup:(uncertain?'Order unconfirmed — ':'')+group,flowGroupId:key+'|'+index,flowOrder:uncertain?'unconfirmed':chain.length>1?'verified':'matched',flowReason:uncertain?'No confirmed sequence connects this gauge to the other selected reaches.':'BoM river-network connections',flowReferenceDate:reference.retrievedUtc});
+    chains.forEach((chain,index)=>{const split=chains.length>1,connected=connectedIds.has(stationKey(matched.get(chain[0]).id)),uncertain=chain.length===1&&!connected&&(split||matched.get(chain[0]).method==='named-river-consensus'),group=first.river+(riverBasins.get(wordKey(first.river)).size>1&&first.basin?' ('+first.basin+')':'')+(split?' — reach '+(index+1):'');
+      for(const gauge of chain)output.push({...gauge,river:first.river,basin:first.basin,flowGroup:(uncertain?'Order unconfirmed — ':'')+group,flowGroupId:key+'|'+index,flowOrder:uncertain?'unconfirmed':chain.length>1||connected?'verified':'matched',flowReason:uncertain?'No confirmed sequence connects this gauge to another selected gauge.':'BoM river-network connections',flowReferenceDate:reference.retrievedUtc});
     });
   }
   unknown.sort((a,b)=>wordKey(a.basin).localeCompare(wordKey(b.basin))||wordKey(sourceRiver(a)).localeCompare(wordKey(sourceRiver(b)))||byName(a,b));

@@ -12,6 +12,7 @@ import datetime
 import gzip
 import gc
 import hashlib
+import html
 import json
 import math
 import pathlib
@@ -26,6 +27,7 @@ SERVICE = "https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/"
 ORIGINAL_NETWORK = SERVICE + "ahgf/Geofabric_V3x_All_Products/MapServer/"
 NETWORK = "https://services-ap1.arcgis.com/ypkPEy1AmwPKGNNv/arcgis/rest/services/Geofabric_Surface_Hydrology_Network/FeatureServer/"
 CATALOGUE = SERVICE + "flood/National_Flood_Gauge_Network/FeatureServer/5/"
+DIRECTORY = "https://www.bom.gov.au/qld/flood/networks/section3.shtml"
 EXTENT = [137.7, -29.3, 154.2, -9]
 STREAM_FIELDS = "hydroid,name,nextdownid,flowdir,from_node,to_node"
 
@@ -61,8 +63,60 @@ def point(feature):
 
 
 def watercourse(name):
+    kind = r"(?:RIVER|CREEK|BROOK|CHANNEL|GULLY|WATER)"
     parts = re.findall(r"\(([^()]*)\)", name)
-    return parts[-1].strip() if parts and re.search(r"\b(RIVER|CREEK|BROOK|CHANNEL|WATER)\b", parts[-1], re.I) else ""
+    for part in reversed(parts):
+        if re.search(r"\b" + kind + r"\b", part, re.I):
+            return part.strip()
+    prefix = re.split(r"\s+(?:at|@)\s+|\s*\(", name, maxsplit=1, flags=re.I)[0].strip()
+    return prefix if re.search(r"\b" + kind + r"$", prefix, re.I) else ""
+
+
+def directory_rows(text):
+    """The published fixed-column index supplies identities, never flow order."""
+    pre = re.search(r"<pre[^>]*>(.*?)</pre>", text, re.S | re.I)
+    if not pre:
+        raise RuntimeError("The BoM station directory has no recognised station table")
+    rows = {}
+    for line in html.unescape(pre[1]).splitlines():
+        if not re.match(r"^ \d{6} ", line):
+            continue
+        coordinates = re.search(r"(\d{6}[NS])\s+(\d{7}[EW])\s*$", line)
+        if not coordinates:
+            continue
+        def dms(value):
+            return (-1 if value[-1] in "SW" else 1) * (int(value[:-5]) + int(value[-5:-3]) / 60 + int(value[-3:-1]) / 3600)
+        identifier = int(line[1:7])
+        row = {"awrc": line[8:16].strip(), "river": line[47:70].strip(), "point": [dms(coordinates[2]), dms(coordinates[1])]}
+        if identifier in rows and rows[identifier] != row:
+            raise RuntimeError("The BoM station directory contains conflicting station identities")
+        rows[identifier] = row
+    if not rows:
+        raise RuntimeError("The BoM station directory contains no recognised stations")
+    return rows
+
+
+def enrich_catalogue(catalogue, directory):
+    # The directory is older than the current catalogue. Require the same BoM
+    # station ID and a point within 250 m; never replace a current AWRC alias.
+    for station in catalogue:
+        attributes = station["attributes"]
+        row = directory.get(attributes["bom_stn_num"])
+        if row and metres(point(station), row["point"]) <= 250:
+            attributes["directory_river"] = row["river"]
+            if not attributes.get("awrc_stateid"):
+                attributes["directory_awrc"] = row["awrc"]
+    return catalogue
+
+
+def station_name(name):
+    """Compare site names while preserving dam/weir headwater and tailwater."""
+    name = re.sub(r"\(([^()]*)\)", lambda match: " " if watercourse(match[1]) else " " + match[1] + " ", name)
+    name = re.split(r"\s+(?:at|@)\s+", name, maxsplit=1, flags=re.I)[-1]
+    name = re.sub(r"\b([HT])\s*/\s*W\b", r"\1W", name, flags=re.I)
+    words = re.sub(r"[^A-Z0-9]+", " ", name.upper()).split()
+    aliases = {"ROAD": "RD", "HEADWATER": "HW", "HEADWATERS": "HW", "TAILWATER": "TW", "TAILWATERS": "TW", "CREEK": "CK", "RIVER": "R"}
+    return " ".join(aliases.get(word, word) for word in words if word not in {"ALERT", "AL", "TM", "TELEMETRY"})
 
 
 def projection(position, stream):
@@ -89,7 +143,7 @@ def projection(position, stream):
 
 def one_channel(candidates):
     """Close consecutive segments are one channel; a fork/confluence is not."""
-    identifiers = {stream["attributes"]["hydroid"] for distance, stream in candidates if distance < candidates[0][0] + 60}
+    identifiers = {stream["attributes"]["hydroid"] for distance, stream in candidates}
     onward = {stream["attributes"]["hydroid"]: stream["attributes"].get("nextdownid") for distance, stream in candidates if stream["attributes"]["hydroid"] in identifiers}
     incoming = collections.Counter(target for target in onward.values() if target in identifiers)
     if any(count > 1 for count in incoming.values()):
@@ -109,6 +163,17 @@ class Download:
         self.cache = cache
         self.offline = offline
         cache.mkdir(parents=True, exist_ok=True)
+
+    def station_directory(self):
+        file = self.cache / "bom-station-directory.html"
+        if not file.exists():
+            if self.offline:
+                raise RuntimeError("Offline build is missing the cached BoM station directory")
+            with urllib.request.urlopen(DIRECTORY, timeout=45) as response:
+                body = response.read().decode("utf-8")
+            directory_rows(body)  # Do not cache a changed layout or error page.
+            file.write_text(body)
+        return file.read_text()
 
     def paged(self, name, endpoint, params):
         file = self.cache / (name + ".json")
@@ -200,7 +265,7 @@ def awrc_matches(catalogue, nodes):
     matches = {}
     for station in catalogue:
         attributes = station["attributes"]
-        identifier = attributes["awrc_stateid"]
+        identifier = attributes.get("awrc_stateid") or attributes.get("directory_awrc")
         if not identifier:
             continue
         for method, candidates in [("awrc", exact[key(identifier)]), ("awrc-numeric", numeric[awrc_base(identifier)])]:
@@ -211,8 +276,75 @@ def awrc_matches(catalogue, nodes):
             if len({node["attributes"]["netwstrmid"] for distance, node in near}) == 1 or len(near) == 1 or near[0][0] < 250 and near[1][0] - near[0][0] > 300:
                 distance, node = near[0]
                 matches[attributes["bom_stn_num"]] = {"stream": node["attributes"]["netwstrmid"], "point": point(node), "method": method, "matchDistance": round(distance), "networkName": node["attributes"]["stnname"], "networkStationId": node["attributes"]["stationno"]}
+                if not attributes.get("awrc_stateid"):
+                    matches[attributes["bom_stn_num"]]["method"] = "directory-" + method
             break
     return matches
+
+
+def named_station_matches(catalogue, nodes, matches):
+    """An exact site name and nearby, unambiguous mapped gauge node.
+
+    This is a second identity check, not a nearest-river guess. Conflicting
+    river names, flags and headwater/tailwater names are not relaxed.
+    """
+    by_site = collections.defaultdict(list)
+    for node in nodes:
+        attributes = node["attributes"]
+        if isinstance(attributes.get("netwstrmid"), int) and attributes["netwstrmid"] > 0 and not attributes.get("flagissues"):
+            by_site[station_name(attributes["stnname"])].append(node)
+    for station in catalogue:
+        attributes = station["attributes"]
+        identifier = attributes["bom_stn_num"]
+        site = station_name(attributes["name"])
+        if identifier in matches or not site:
+            continue
+        rivers = {key(name) for name in (watercourse(attributes["name"]), attributes.get("directory_river")) if name}
+        near = []
+        for node in by_site.get(site, []):
+            awrc = attributes.get("awrc_stateid") or attributes.get("directory_awrc")
+            if awrc and awrc_base(awrc) == awrc_base(node["attributes"]["stationno"]) and not compatible_awrc_suffix(awrc, node["attributes"]["stationno"]):
+                continue
+            river = watercourse(node["attributes"]["stnname"])
+            if rivers and (not river or key(river) not in rivers):
+                continue
+            distance = metres(point(station), point(node))
+            if distance <= 250:
+                near.append((distance, node))
+        if near and len({node["attributes"]["netwstrmid"] for distance, node in near}) == 1:
+            distance, node = min(near, key=lambda entry: entry[0])
+            matches[identifier] = {"stream": node["attributes"]["netwstrmid"], "point": point(node), "method": "named-station-location", "matchDistance": round(distance), "networkName": node["attributes"]["stnname"], "networkStationId": node["attributes"]["stationno"]}
+    return matches
+
+
+def placements(match, streams):
+    """Keep every plausible channel; never resolve a braid by nearest alone."""
+    result = []
+    for identifier in match.get("candidateStreams", [match["stream"]]):
+        projected = projection(match["point"], streams[identifier])
+        if not projected or projected[0] > (120 if match.get("candidateStreams") else 1500):
+            return []
+        result.append({"stream": identifier, "position": round(projected[1], 2)})
+    return result
+
+
+def confirmed_downstream(first, second, trace):
+    if not first.get("placements") or not second.get("placements") or metres(first["point"], second["point"]) <= 50:
+        return False
+    # All plausible channel assignments must agree. A side branch may rejoin
+    # downstream, but proximity alone never creates a connection across it.
+    return all(b["stream"] in trace[a["stream"]][0] if a["stream"] != b["stream"] else b["position"] - a["position"] > 50
+               for a in first["placements"] for b in second["placements"])
+
+
+def regional_stream(stream):
+    """Bound new connector downloads, retaining any known paths beyond it."""
+    coordinates = [position for path in (stream.get("geometry") or {}).get("paths", []) for position in path]
+    if not coordinates:
+        return True
+    west, south, east, north = EXTENT
+    return (max(position[0] for position in coordinates) >= west - .25 and min(position[0] for position in coordinates) <= east + .25
+            and max(position[1] for position in coordinates) >= south - .25 and min(position[1] for position in coordinates) <= north + .25)
 
 
 def graph_for(streams, splits):
@@ -252,11 +384,13 @@ def build(cache, output, offline=False):
         raise RuntimeError("The public catalogue contains duplicate station IDs")
     legacy = [cache / ("nodes-" + str(offset) + ".json") for offset in (0, 2000, 4000, 6000)]
     nodes = [feature for file in legacy for feature in features(json.loads(file.read_text()))] if all(file.exists() for file in legacy) else download.paged("network-gauges", NETWORK + "3/", {"where": "1=1", "outFields": "hydroid,stationno,stnname,netwstrmid,flagissues", "returnGeometry": "true", "outSR": 4326})
-    matches = awrc_matches(catalogue, nodes)
-    names = {watercourse(station["attributes"]["name"]).upper() for station in catalogue} - {""}
+    directory_text = download.station_directory()
+    enrich_catalogue(catalogue, directory_rows(directory_text))
+    matches = named_station_matches(catalogue, nodes, awrc_matches(catalogue, nodes))
+    names = {name.upper() for station in catalogue for name in (watercourse(station["attributes"]["name"]), station["attributes"].get("directory_river")) if name}
     for match in matches.values():
         name = re.split(r"\s+(?:at|@)\s+", match["networkName"], maxsplit=1, flags=re.I)[0]
-        if re.search(r"\b(RIVER|CREEK|BROOK|CHANNEL)\b", name, re.I):
+        if re.search(r"\b(RIVER|CREEK|BROOK|CHANNEL|GULLY)\b", name, re.I):
             names.add(name.upper())
     # Reuse complete licensed V3.3 downloads, verifying their HydroID topology
     # against Digital Atlas before combining the two published service copies.
@@ -289,19 +423,18 @@ def build(cache, output, offline=False):
         identifier = station["attributes"]["bom_stn_num"]
         if identifier in matches:
             continue
-        river = watercourse(station["attributes"]["name"])
+        rivers = {key(name) for name in (watercourse(station["attributes"]["name"]), station["attributes"].get("directory_river")) if name}
         candidates = []
-        for stream in by_name.get(key(river), []):
+        for stream in [stream for river in sorted(rivers) for stream in by_name.get(river, [])]:
             projected = projection(point(station), stream)
             if projected and projected[0] <= 120:
                 candidates.append((projected[0], stream))
-        candidates.sort(key=lambda entry: entry[0])
+        candidates.sort(key=lambda entry: (entry[0], entry[1]["attributes"]["hydroid"]))
         if not candidates:
             continue
         nearest = candidates[0][1]
-        if one_channel(candidates):
-            matches[identifier] = {"stream": nearest["attributes"]["hydroid"], "point": point(station), "method": "named-river-location", "matchDistance": round(candidates[0][0])}
-    seeds = {match["stream"] for match in matches.values()}
+        matches[identifier] = {"stream": nearest["attributes"]["hydroid"], "candidateStreams": sorted({stream["attributes"]["hydroid"] for distance, stream in candidates}), "point": point(station), "method": "named-river-location" if one_channel(candidates) else "named-river-consensus", "matchDistance": round(candidates[0][0])}
+    seeds = {identifier for match in matches.values() for identifier in match.get("candidateStreams", [match["stream"]])}
     # Geometry is needed for station matching only. Keep seed shapes for the
     # final linear position check, not all national named-stream geometry.
     for identifier, stream in streams.items():
@@ -315,8 +448,10 @@ def build(cache, output, offline=False):
     for row in split_rows:
         attributes = row["attributes"]
         splits[attributes["featureid"]].add(attributes["nextdownid"])
-    if offline:
-        for file in cache.glob("stream-links-*.json"):
+    # Reuse topology already downloaded for this version in either mode. The
+    # batch hashes change when newly matched gauges introduce additional seeds.
+    for pattern in ("stream-links-*.json", "topology-tile-*.json"):
+        for file in cache.glob(pattern):
             if ".page-" in file.name:
                 continue
             for feature in features(json.loads(file.read_text())):
@@ -333,7 +468,7 @@ def build(cache, output, offline=False):
                 continue
             reachable.add(identifier)
             pending.extend(graph.get(identifier, []))
-        missing = reachable - streams.keys()
+        missing = reachable - streams.keys() - unresolved
         if not missing:
             break
         if offline:
@@ -345,15 +480,18 @@ def build(cache, output, offline=False):
             raise RuntimeError("Downstream reference exceeded its build limit")
         rows = download.streams(missing, geometry=len(missing) <= 64)
         returned = {feature["attributes"]["hydroid"] for feature in rows}
-        if returned != missing:
-            raise RuntimeError("Downstream links refer to missing stream IDs")
+        unresolved.update(missing - returned)
         streams.update({feature["attributes"]["hydroid"]: feature for feature in rows})
         if len(missing) <= 64:
-            for feature in download.tiles(rows):
+            outside = {feature["attributes"]["hydroid"]: feature for feature in rows if not regional_stream(feature)}
+            for targets in graph_for(outside, splits).values():
+                unresolved.update(targets - streams.keys())
+            for feature in download.tiles([feature for feature in rows if regional_stream(feature)]):
                 streams.setdefault(feature["attributes"]["hydroid"], feature)
         print("Downstream pass " + str(attempt + 1) + ": " + str(len(rows)) + " connector reaches", flush=True)
     else:
         raise RuntimeError("Downstream reference could not be completed")
+    unresolved = reachable - streams.keys()
     records = []
     for station in catalogue:
         attributes = station["attributes"]
@@ -362,26 +500,35 @@ def build(cache, output, offline=False):
         if not match:
             continue
         stream = streams[match["stream"]]
-        projected = projection(match["point"], stream)
-        if not projected or projected[0] > 1500:
+        possible = placements(match, streams)
+        if not possible:
             continue
-        public_name = watercourse(attributes["name"])
-        native_name = stream["attributes"].get("name")
+        public_name = watercourse(attributes["name"]) or (attributes.get("directory_river") or "").title() or watercourse(match.get("networkName", ""))
+        native_name = str(stream["attributes"].get("name") or "").strip()
         river = public_name if not native_name or key(public_name) == key(native_name) else native_name.title()
         if not river:
             continue
-        records.append({"id": str(identifier).zfill(6), "point": [round(value, 6) for value in point(station)], "river": river, "basin": attributes["basin"] or "", "stream": match["stream"], "position": round(projected[1], 2), "method": match["method"], "matchDistance": match["matchDistance"], "awrc": attributes["awrc_stateid"], "networkStationId": match.get("networkStationId")})
-    trace = {identifier: descendants(identifier, graph) for identifier in {record["stream"] for record in records}}
-    cyclic = [record for record in records if trace[record["stream"]][1]]
-    records = [record for record in records if not trace[record["stream"]][1]]
+        records.append({"id": str(identifier).zfill(6), "point": [round(value, 6) for value in point(station)], "river": river, "basin": attributes["basin"] or "", "stream": match["stream"], "position": next(entry["position"] for entry in possible if entry["stream"] == match["stream"]), "placements": possible, "method": match["method"], "matchDistance": match["matchDistance"], "awrc": attributes["awrc_stateid"], "directoryAwrc": attributes.get("directory_awrc"), "networkStationId": match.get("networkStationId")})
+    trace = {identifier: descendants(identifier, graph) for identifier in {entry["stream"] for record in records for entry in record["placements"]}}
+    cyclic = [record for record in records if any(trace[entry["stream"]][1] for entry in record["placements"])]
+    records = [record for record in records if record not in cyclic]
     for record in records:
-        visited = trace[record["stream"]][0]
-        record["downstream"] = sorted(other["id"] for other in records if other is not record and metres(record["point"], other["point"]) > 50 and (other["stream"] in visited and other["stream"] != record["stream"] or other["stream"] == record["stream"] and other["position"] - record["position"] > 50))
+        record["downstream"] = sorted(other["id"] for other in records if other is not record and confirmed_downstream(record, other, trace))
     # A reciprocal relationship is never published as upstream/downstream order.
     lookup = {record["id"]: record for record in records}
     if any(record["id"] in lookup[target]["downstream"] for record in records for target in record["downstream"]):
         raise RuntimeError("Reference contains reciprocal station ordering")
-    result = {"schemaVersion": 1, "retrievedUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(), "extent": EXTENT, "attribution": "Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric V3.3 via Digital Atlas of Australia, Geoscience Australia; National Flood Gauge Network", "sources": {"stations": CATALOGUE, "networkGauges": NETWORK + "3/", "networkStreams": NETWORK + "7/", "flowSplits": NETWORK + "15/", "originalNetwork": ORIGINAL_NETWORK}, "catalogueCount": len(catalogue), "stationCount": len(records), "cyclicMatchesOmitted": len(cyclic), "unresolvedDownstreamContinuations": len(unresolved), "relationshipBasis": "Explicit directed paths present in the reference; missing continuations do not establish an order", "methods": dict(collections.Counter(record["method"] for record in records)), "stations": sorted(records, key=lambda record: record["id"])}
+    directory_date = re.search(r"Date:\s*(\d{2}/\d{2}/\d{4})", directory_text)
+    result = {
+        "schemaVersion": 1, "retrievedUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(), "extent": EXTENT,
+        "attribution": "Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric V3.3 via Digital Atlas of Australia, Geoscience Australia; National Flood Gauge Network",
+        "sources": {"stations": CATALOGUE, "stationDirectory": DIRECTORY, "networkGauges": NETWORK + "3/", "networkStreams": NETWORK + "7/", "flowSplits": NETWORK + "15/", "originalNetwork": ORIGINAL_NETWORK},
+        "stationDirectoryPublished": datetime.datetime.strptime(directory_date[1], "%d/%m/%Y").date().isoformat() if directory_date else None,
+        "catalogueCount": len(catalogue), "stationCount": len(records), "cyclicMatchesOmitted": len(cyclic),
+        "unresolvedDownstreamContinuations": len(unresolved),
+        "relationshipBasis": "Explicit directed paths; all plausible named-channel placements must agree. Co-located sites and missing continuations do not establish an order.",
+        "methods": dict(collections.Counter(record["method"] for record in records)), "stations": sorted(records, key=lambda record: record["id"])
+    }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, separators=(",", ":")) + "\n")
     print(json.dumps({key: value for key, value in result.items() if key not in ("stations", "sources")}))

@@ -21,7 +21,17 @@ test('a fork has separate directed reaches and no invented relationship between 
   const stations=reference([record(1,[2,3,4]),record(2,[4]),record(3,[4]),record(4)]),output=orderGaugesByFlow([gauge(4,'Delta'),gauge(3,'Charlie'),gauge(2,'Bravo'),gauge(1,'Alpha')],stations),groups=new Map();for(const gauge of output){if(!groups.has(gauge.flowGroupId))groups.set(gauge.flowGroupId,[]);groups.get(gauge.flowGroupId).push(gauge);}
   assert.equal(output.length,4);assert.equal(new Set(output.map(gauge=>gauge.id)).size,4);assert.equal(groups.size,2);
   for(const rows of groups.values())for(let i=1;i<rows.length;i++)assert.ok(stations.stations.find(station=>station.id===rows[i-1].stationId).downstream.includes(rows[i].stationId));
-  const isolated=output.find(gauge=>gauge.flowOrder==='unconfirmed');assert.ok(isolated.flowGroup.includes('reach'));assert.ok(gaugeFlowSummary(output).includes('1 order unconfirmed'));
+  assert.ok(output.every(gauge=>gauge.flowOrder==='verified'));assert.ok(!gaugeFlowSummary(output).includes('unconfirmed'));
+  const branches=[output.find(gauge=>gauge.stationId==='2'),output.find(gauge=>gauge.stationId==='3')];assert.ok(branches.every(gauge=>!gauge.flowDownstream.includes(branches.find(other=>other!==gauge).label)));
+});
+test('a matched but disconnected reach still has unconfirmed order',()=>{
+  const stations=reference([record(1,[2]),record(2),record(3)]),output=orderGaugesByFlow([gauge(1,'Upper'),gauge(2,'Lower'),gauge(3,'Other channel')],stations),other=output.find(gauge=>gauge.stationId==='3');
+  assert.equal(other.flowOrder,'unconfirmed');assert.deepEqual(other.flowDownstream,[]);assert.ok(gaugeFlowSummary(output).includes('1 order unconfirmed'));
+});
+test('a multi-channel match needs a confirmed connection to a selected gauge',()=>{
+  const stations=reference([record(1,[2],{method:'named-river-consensus',river:'Branch Creek'}),record(2,[],{river:'Main River'})]);
+  assert.equal(orderGaugesByFlow([gauge(1,'Branch')],stations)[0].flowOrder,'unconfirmed');
+  const output=orderGaugesByFlow([gauge(1,'Branch'),gauge(2,'Receiving gauge')],stations);assert.ok(output.every(gauge=>gauge.flowOrder==='verified'));assert.deepEqual(output[0].flowDownstream,[output[1].label]);
 });
 test('leading-zero BoM IDs match only with a nearby source location',()=>{
   const stations=reference([record('036169')]);assert.equal(orderGaugesByFlow([gauge('36169','Coolagh')],stations)[0].flowOrder,'matched');
@@ -60,6 +70,12 @@ test('an empty flood-area match makes no ordering-reference request',async()=>{
 });
 test('the bundled public reference is valid and confirms the supplied Barcoo example',async()=>{
   const data=validateGaugeFlowReference(JSON.parse(await readFile(new URL('../data/gauge-flow.json',import.meta.url),'utf8'))),coolagh=data.stations.find(station=>station.id==='036169'),retreat=data.stations.find(station=>station.id==='538001');assert.ok(data.stationCount>100);assert.ok(coolagh);assert.ok(retreat);assert.ok(coolagh.downstream.includes(retreat.id));assert.ok(!retreat.downstream.includes(coolagh.id));
+});
+test('the expanded reference confirms directory aliases, named sites and a rejoining channel',async()=>{
+  const data=validateGaugeFlowReference(JSON.parse(await readFile(new URL('../data/gauge-flow.json',import.meta.url),'utf8'))),stations=new Map(data.stations.map(station=>[station.id,station]));
+  assert.ok(data.sources.stationDirectory.includes('bom.gov.au'));assert.equal(data.stationDirectoryPublished,'2022-01-05');assert.ok(data.stations.every(station=>station.river.trim()));
+  for(const [upper,lower]of [['536009','538001'],['537008','537004'],['539202','539198'],['538012','538010']]){assert.ok(stations.get(upper).downstream.includes(lower));assert.ok(!stations.get(lower).downstream.includes(upper));}
+  assert.equal(stations.get('538012').method,'named-river-consensus');assert.equal(stations.get('538012').placements.length,2);assert.equal(stations.get('541103').river,'Campbells Gully');
 });
 test('a validated ordering reference is cached without starting requests after cancellation',async()=>{
   const prior=globalThis.fetch;let requests=0;globalThis.fetch=async()=>{requests++;return new Response(JSON.stringify(reference([record(1)])));};
