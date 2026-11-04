@@ -33,6 +33,14 @@ test('a multi-channel match needs a confirmed connection to a selected gauge',()
   assert.equal(orderGaugesByFlow([gauge(1,'Branch')],stations)[0].flowOrder,'unconfirmed');
   const output=orderGaugesByFlow([gauge(1,'Branch'),gauge(2,'Receiving gauge')],stations);assert.ok(output.every(gauge=>gauge.flowOrder==='verified'));assert.deepEqual(output[0].flowDownstream,[output[1].label]);
 });
+test('reviewed instruments at the same river site retain readings without an invented relative order',()=>{
+  const stations=reference([record(1,[],{equivalentSite:'1'}),record(2,[],{equivalentSite:'1'})]),input=[gauge(1,'Alert',{height:7.2,category:'major'}),gauge(2,'Telemetry',{height:4.8,category:'moderate'})],output=orderGaugesByFlow(input,stations);
+  assert.equal(output.length,2);assert.ok(output.every(gauge=>gauge.flowOrder==='equivalent'&&gauge.flowDownstream.length===0));assert.equal(output[0].flowGroupId,output[1].flowGroupId);assert.ok(output.every(gauge=>gauge.flowGroup.includes('same river site')&&gauge.flowReason.includes('no relative order')));assert.deepEqual(output.map(gauge=>gauge.height),[7.2,4.8]);assert.deepEqual(output.map(gauge=>gauge.category),['major','moderate']);assert.ok(gaugeFlowSummary(output).includes('2 gauges share a confirmed river site'));assert.ok(!gaugeFlowSummary(output).includes('unconfirmed'));
+  const moved=orderGaugesByFlow([input[0],{...input[1],point:[150,-25]}],stations);assert.equal(moved.find(gauge=>gauge.stationId==='2').flowOrder,'unconfirmed');assert.equal(moved.find(gauge=>gauge.stationId==='1').flowOrder,'matched');
+});
+test('malformed equivalent-site metadata cannot turn uncertain connections into confirmed sites',()=>{
+  for(const rows of [[record(1,[],{equivalentSite:'9'})],[record(1,[],{equivalentSite:'2'}),record(2)],[record(1,[2],{equivalentSite:'1'}),record(2,[],{equivalentSite:'1'})],[record(1,[],{equivalentSite:'1'}),record(2,[],{equivalentSite:'1',river:'Other River'})]])assert.throws(()=>validateGaugeFlowReference(reference(rows)),/equivalent-site/);
+});
 test('leading-zero BoM IDs match only with a nearby source location',()=>{
   const stations=reference([record('036169')]);assert.equal(orderGaugesByFlow([gauge('36169','Coolagh')],stations)[0].flowOrder,'matched');
   const moved=orderGaugesByFlow([gauge('36169','Moved station',{point:[150,-25]})],stations)[0];assert.equal(moved.flowOrder,'unconfirmed');assert.ok(moved.flowGroup.includes('Order unconfirmed'));
@@ -76,6 +84,12 @@ test('the expanded reference confirms directory aliases, named sites and a rejoi
   assert.ok(data.sources.stationDirectory.includes('bom.gov.au'));assert.equal(data.stationDirectoryPublished,'2022-01-05');assert.ok(data.stations.every(station=>station.river.trim()));
   for(const [upper,lower]of [['536009','538001'],['537008','537004'],['539202','539198'],['538012','538010']]){assert.ok(stations.get(upper).downstream.includes(lower));assert.ok(!stations.get(lower).downstream.includes(upper));}
   assert.equal(stations.get('538012').method,'named-river-consensus');assert.equal(stations.get('538012').placements.length,2);assert.equal(stations.get('541103').river,'Campbells Gully');
+});
+test('reviewed BoM evidence resolves the surveyed sites while preserving unproved ordering',async()=>{
+  const data=validateGaugeFlowReference(JSON.parse(await readFile(new URL('../data/gauge-flow.json',import.meta.url),'utf8'))),stations=new Map(data.stations.map(station=>[station.id,station]));
+  assert.ok(data.stationCount>=1540);assert.equal(stations.get('530045').basin,'Cooper Creek');assert.ok(stations.get('530045').downstream.includes('036013'));assert.ok(stations.get('544015').downstream.includes('044181'));assert.ok(stations.get('540474').downstream.includes('540513'));assert.equal(stations.get('540474').equivalentSite,'540364');assert.ok(!stations.get('540474').downstream.includes('540364'));assert.ok(!stations.get('036037').downstream.includes('536014'));assert.ok(!stations.get('536014').downstream.includes('036037'));assert.equal(stations.get('036037').river,'Landsborough River');
+  const kilcoy=orderGaugesByFlow(['540373','540482'].map(id=>gauge(id,'Kilcoy '+id,{point:stations.get(id).point})),data);assert.ok(kilcoy.every(gauge=>gauge.flowOrder==='equivalent'&&gauge.flowDownstream.length===0));
+  const basin=orderGaugesByFlow([gauge('540795','Limestone Park Detention Basin',{point:[152.7657,-27.6211]})],data)[0];assert.equal(basin.flowOrder,'unconfirmed');assert.deepEqual(basin.flowDownstream,[]);
 });
 test('a validated ordering reference is cached without starting requests after cancellation',async()=>{
   const prior=globalThis.fetch;let requests=0;globalThis.fetch=async()=>{requests++;return new Response(JSON.stringify(reference([record(1)])));};

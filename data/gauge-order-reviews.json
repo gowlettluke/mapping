@@ -1,0 +1,3069 @@
+{
+  "schemaVersion": 1,
+  "reviewedDate": "2026-11-05",
+  "description": "Reviewed public evidence for the 70 unresolved entries in the captured Queensland warning areas. Relative river order only; no travel-time, level or flood-class inference. Map links are reviewed interpretations of the cited network maps and public gauge locations, rather than automatic coordinate sorting.",
+  "attribution": "Commonwealth of Australia (Bureau of Meteorology); \u00a9 State of Queensland, 2024. Licensed under CC BY 4.0.",
+  "sources": {
+    "bomClassifications": {
+      "url": "https://www.bom.gov.au/qld/flood/networks/section4.shtml",
+      "published": "2022-01-05",
+      "description": "BoM station listing in catchment order from upstream to downstream"
+    },
+    "bomSurvey": {
+      "url": "https://www.bom.gov.au/qld/flood/networks/section6.shtml",
+      "published": "2022-01-05",
+      "description": "AMTD is distance along the watercourse upstream from its outlet; gauge zero is not an ordering field"
+    },
+    "bomDirectory": {
+      "url": "https://www.bom.gov.au/qld/flood/networks/section3.shtml",
+      "published": "2022-01-05"
+    },
+    "bomServiceSpecification": {
+      "url": "https://www.bom.gov.au/sites/default/files/2026-05/service-level-specification-flood-forecasting-warning-services-queensland-v3.7.pdf",
+      "published": "2026-05"
+    },
+    "bomBullooCooperMap": {
+      "url": "https://www.bom.gov.au/qld/flood/brochures/bulloo/CooperBulloo_map.png",
+      "published": "2020-10-30"
+    },
+    "bomBorderMap": {
+      "url": "https://www.bom.gov.au/qld/flood/brochures/border_rivers/BorderRivers_map.png",
+      "published": "2020-10-30"
+    },
+    "bomBrisbaneMap": {
+      "url": "https://www.bom.gov.au/qld/flood/brochures/brisbane_upper/Brisbane_map.png",
+      "published": "2020-10-30"
+    },
+    "moogerahOwner": {
+      "url": "https://www.seqwater.com.au/dams/moogerah",
+      "description": "The dam is on Reynolds Creek"
+    },
+    "bomWarregoParooMap": {
+      "url": "https://www.bom.gov.au/qld/flood/brochures/warrego/WarregoParoo_map.png",
+      "published": "2020-10-30"
+    },
+    "bomLowerCondamineMap": {
+      "url": "https://www.bom.gov.au/qld/flood/brochures/condamine_balonne/Condamine_Lower_map.png",
+      "published": "2020-10-30"
+    },
+    "providerStationIndex": {
+      "url": "https://www.publications.qld.gov.au/dataset/99adc6d9-8dbe-4d59-874b-b42e2e500830/resource/3ad78778-ad4d-4628-8bb2-1860f81cfa30/download/stream-gauging-station-network.pdf",
+      "published": "2024-10",
+      "attribution": "\u00a9 State of Queensland, 2024. Licensed under CC BY 4.0."
+    },
+    "bomCatalogue": {
+      "url": "https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/5/",
+      "description": "Public station identifiers, watercourse labels and reference locations"
+    },
+    "limestoneFactSheet": {
+      "url": "https://www.ipswich.qld.gov.au/__data/assets/pdf_file/0003/122943/Limestone-Basin_Fact-Sheet.pdf",
+      "published": "2018-10",
+      "description": "Council describes the detention basin and local drainage purpose but does not establish its downstream gauge connection."
+    }
+  },
+  "stations": [
+    {
+      "id": "035049",
+      "name": "Gillespie",
+      "point": [
+        145.7869,
+        -24.5608
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1142
+    },
+    {
+      "id": "035259",
+      "name": "Duneira",
+      "point": [
+        145.5692,
+        -24.5408
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1144
+    },
+    {
+      "id": "035284",
+      "name": "Tambo (Barcoo River)",
+      "point": [
+        146.2567,
+        -24.88
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1141
+    },
+    {
+      "id": "036013",
+      "name": "Camoola Park (Thomson River)",
+      "point": [
+        144.5194,
+        -23.0394
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1133,
+      "amtdKm": 920.0
+    },
+    {
+      "id": "036026",
+      "name": "Isisford Post Office (Barcoo River)",
+      "point": [
+        144.4406,
+        -24.2591
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1157,
+      "amtdKm": 590.5
+    },
+    {
+      "id": "036037",
+      "name": "Muttaburra (Thomson River)",
+      "point": [
+        144.5469,
+        -22.595
+      ],
+      "river": "Landsborough River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1130
+    },
+    {
+      "id": "036155",
+      "name": "Blackall (Barcoo River)",
+      "point": [
+        145.4608,
+        -24.4292
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1146,
+      "amtdKm": 379.7
+    },
+    {
+      "id": "036169",
+      "name": "Coolagh (Barcoo River)",
+      "point": [
+        144.8694,
+        -24.0417
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1149,
+      "amtdKm": 284.0
+    },
+    {
+      "id": "037040",
+      "name": "Stonehenge (Thomson River)",
+      "point": [
+        143.2881,
+        -24.3514
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1138,
+      "amtdKm": 663.7
+    },
+    {
+      "id": "038018",
+      "name": "Retreat  (Barcoo River)",
+      "point": [
+        143.2756,
+        -25.1961
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1163,
+      "amtdKm": 33.8
+    },
+    {
+      "id": "038037",
+      "name": "Jundah (Thomson River)",
+      "point": [
+        143.05,
+        -24.8361
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1140,
+      "amtdKm": 590.4
+    },
+    {
+      "id": "039000",
+      "name": "Abercorn (Three Moon Creek)",
+      "point": [
+        151.1292,
+        -25.1333
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 410,
+      "amtdKm": 12.9
+    },
+    {
+      "id": "039073",
+      "name": "Mundubbera",
+      "point": [
+        151.2986,
+        -25.5908
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 444,
+      "amtdKm": 239.4
+    },
+    {
+      "id": "039165",
+      "name": "Monto (Three Moon Creek)",
+      "point": [
+        151.1067,
+        -24.8586
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 407,
+      "amtdKm": 64.6
+    },
+    {
+      "id": "039184",
+      "name": "Paradise Dam",
+      "point": [
+        151.9194,
+        -25.3511
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 469
+    },
+    {
+      "id": "039191",
+      "name": "Gayndah (Burnett River)",
+      "point": [
+        151.6133,
+        -25.6283
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 449,
+      "amtdKm": 200.2
+    },
+    {
+      "id": "039193",
+      "name": "Mt Lawless Tm",
+      "point": [
+        151.655,
+        -25.545
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 466,
+      "amtdKm": 184.1
+    },
+    {
+      "id": "039236",
+      "name": "Wuruma Dam",
+      "point": [
+        150.9903,
+        -25.1953
+      ],
+      "river": "Nogo River",
+      "basin": "Burnett River",
+      "publishedRank": 417,
+      "amtdKm": 22.8,
+      "dam": "Wuruma"
+    },
+    {
+      "id": "039318",
+      "name": "Ceratodus Tm",
+      "point": [
+        151.145,
+        -25.2831
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 416,
+      "amtdKm": 321.1
+    },
+    {
+      "id": "039319",
+      "name": "Abercorn Tm  (Three Moon Creek)",
+      "point": [
+        151.1306,
+        -25.1292
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 408,
+      "amtdKm": 13.2
+    },
+    {
+      "id": "039320",
+      "name": "Jones Weir (TW) (Burnett River)",
+      "point": [
+        151.2964,
+        -25.5947
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 443,
+      "amtdKm": 240.0
+    },
+    {
+      "id": "039323",
+      "name": "Gayndah Flume Tm",
+      "point": [
+        151.6031,
+        -25.6217
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 447
+    },
+    {
+      "id": "040203",
+      "name": "Tiaro",
+      "point": [
+        152.5814,
+        -25.7289
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 380,
+      "amtdKm": 79.7
+    },
+    {
+      "id": "040445",
+      "name": "Harrisville",
+      "point": [
+        152.6417,
+        -27.8133
+      ],
+      "river": "Warrill Creek",
+      "basin": "Brisbane River",
+      "publishedRank": 195,
+      "amtdKm": 30.5
+    },
+    {
+      "id": "040455",
+      "name": "Dunollie (Boyne River)",
+      "point": [
+        151.3667,
+        -25.85
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 438,
+      "amtdKm": 40.1
+    },
+    {
+      "id": "040549",
+      "name": "Rosewood",
+      "point": [
+        152.6044,
+        -27.6594
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 181
+    },
+    {
+      "id": "040627",
+      "name": "Woodford",
+      "point": [
+        152.7628,
+        -26.94
+      ],
+      "river": "Stanley River",
+      "basin": "Brisbane River",
+      "publishedRank": 104,
+      "amtdKm": 64.9
+    },
+    {
+      "id": "040677",
+      "name": "Maroon Dam",
+      "point": [
+        152.6557,
+        -28.1752
+      ],
+      "river": "Burnett Creek",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 50,
+      "amtdKm": 23.3,
+      "dam": "Maroon"
+    },
+    {
+      "id": "040688",
+      "name": "Miva",
+      "point": [
+        152.4919,
+        -25.9575
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 376,
+      "amtdKm": 126.0
+    },
+    {
+      "id": "040722",
+      "name": "Boondooma Dam",
+      "point": [
+        151.4417,
+        -26.0942
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 437,
+      "amtdKm": 86.7,
+      "dam": "Boondooma"
+    },
+    {
+      "id": "040754",
+      "name": "Rathdowney Tm",
+      "point": [
+        152.8681,
+        -28.2153
+      ],
+      "river": "Logan River",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 54,
+      "amtdKm": 150.2
+    },
+    {
+      "id": "040820",
+      "name": "Somerset Dam (Stanley River)",
+      "point": [
+        152.555,
+        -27.1169
+      ],
+      "river": "Stanley River",
+      "basin": "Brisbane River",
+      "publishedRank": 108
+    },
+    {
+      "id": "040824",
+      "name": "Fishermans Pocket (Mary River)",
+      "point": [
+        152.5994,
+        -26.1711
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 372,
+      "amtdKm": 170.4
+    },
+    {
+      "id": "040832",
+      "name": "Forest Home (Logan River)",
+      "point": [
+        152.77,
+        -28.2033
+      ],
+      "river": "Logan River",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 52,
+      "amtdKm": 166.4
+    },
+    {
+      "id": "040833",
+      "name": "Home Park (Mary River)",
+      "point": [
+        152.525,
+        -25.7683
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 379,
+      "amtdKm": 90.8
+    },
+    {
+      "id": "040946",
+      "name": "Rathdowney (Logan River)",
+      "point": [
+        152.8681,
+        -28.2153
+      ],
+      "river": "Logan River",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 53,
+      "amtdKm": 150.2
+    },
+    {
+      "id": "041137",
+      "name": "Coolmunda Dam TW Tm (Macintyre Brook)",
+      "point": [
+        151.2169,
+        -28.4369
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1034,
+      "dam": "Coolmunda",
+      "side": "tailwater"
+    },
+    {
+      "id": "041343",
+      "name": "Yangan",
+      "point": [
+        152.2156,
+        -28.2006
+      ],
+      "river": "Swan Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 881,
+      "amtdKm": 24.1
+    },
+    {
+      "id": "041357",
+      "name": "Warwick",
+      "point": [
+        152.0275,
+        -28.2111
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 886,
+      "amtdKm": 1101.8
+    },
+    {
+      "id": "041406",
+      "name": "Inglewood Bridge",
+      "point": [
+        151.0839,
+        -28.4156
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1038,
+      "amtdKm": 57.7
+    },
+    {
+      "id": "041411",
+      "name": "Chinchilla Weir Tw",
+      "point": [
+        150.5753,
+        -26.8
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 936,
+      "amtdKm": 696.5
+    },
+    {
+      "id": "041457",
+      "name": "Coolmunda Dam",
+      "point": [
+        151.213,
+        -28.4225
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1032,
+      "dam": "Coolmunda",
+      "side": "tailwater",
+      "identitySource": {
+        "source": "bomServiceSpecification",
+        "page": 53
+      }
+    },
+    {
+      "id": "041463",
+      "name": "Killarney",
+      "point": [
+        152.2944,
+        -28.3394
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 873,
+      "amtdKm": 1163.6
+    },
+    {
+      "id": "041473",
+      "name": "Pratten (Condamine River)",
+      "point": [
+        151.8119,
+        -28.1022
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 892,
+      "amtdKm": 1049.0
+    },
+    {
+      "id": "041477",
+      "name": "Connolly Dam",
+      "point": [
+        151.9969,
+        -28.3561
+      ],
+      "river": "Rosenthal Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 883,
+      "amtdKm": 21.7,
+      "dam": "Connolly"
+    },
+    {
+      "id": "041494",
+      "name": "Elbow Valley Tm",
+      "point": [
+        152.1403,
+        -28.3731
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 875,
+      "amtdKm": 1136.8
+    },
+    {
+      "id": "041503",
+      "name": "Warwick (Scots College) (Condamine River)",
+      "point": [
+        152.05,
+        -28.2167
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 885,
+      "amtdKm": 1105.6
+    },
+    {
+      "id": "041517",
+      "name": "Chinchilla Weir TW (Condamine River)",
+      "point": [
+        150.575,
+        -26.8
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 937,
+      "amtdKm": 696.7
+    },
+    {
+      "id": "041519",
+      "name": "Booba Sands (Macintyre Brook)",
+      "point": [
+        150.845,
+        -28.5767
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1042,
+      "amtdKm": 15.9
+    },
+    {
+      "id": "041520",
+      "name": "Inglewood Weir (Macintyre Brook)",
+      "point": [
+        151.07,
+        -28.4167
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1040,
+      "amtdKm": 55.2
+    },
+    {
+      "id": "041530",
+      "name": "Yangan (Swan Creek)",
+      "point": [
+        152.2156,
+        -28.2006
+      ],
+      "river": "Swan Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 882,
+      "amtdKm": 24.1
+    },
+    {
+      "id": "041532",
+      "name": "Connolly Dam",
+      "point": [
+        151.9967,
+        -28.3558
+      ],
+      "river": "Rosenthal Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 884,
+      "amtdKm": 21.7,
+      "dam": "Connolly"
+    },
+    {
+      "id": "041534",
+      "name": "Warwick (Condamine River)",
+      "point": [
+        152.0275,
+        -28.2111
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 887,
+      "amtdKm": 1101.8
+    },
+    {
+      "id": "041535",
+      "name": "Elbow Valley (Condamine River)",
+      "point": [
+        152.14,
+        -28.3731
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 876,
+      "amtdKm": 1136.8
+    },
+    {
+      "id": "042048",
+      "name": "Condamine",
+      "point": [
+        150.1419,
+        -26.9269
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 946,
+      "amtdKm": 613.0
+    },
+    {
+      "id": "042105",
+      "name": "Nindigully TM (Moonie River)",
+      "point": [
+        148.8333,
+        -28.4167
+      ],
+      "river": "Moonie River",
+      "basin": "Moonie River",
+      "publishedRank": 1076,
+      "amtdKm": 95.0
+    },
+    {
+      "id": "043033",
+      "name": "Tindarra (Bungil Creek)",
+      "point": [
+        148.8047,
+        -26.4689
+      ],
+      "river": "Bungil Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 959
+    },
+    {
+      "id": "043063",
+      "name": "Surat (Balonne River)",
+      "point": [
+        149.0728,
+        -27.1519
+      ],
+      "river": "Balonne River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 956,
+      "amtdKm": 406.3
+    },
+    {
+      "id": "043074",
+      "name": "Roma",
+      "point": [
+        148.7936,
+        -26.5725
+      ],
+      "river": "Bungil Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 960,
+      "amtdKm": 105.6
+    },
+    {
+      "id": "044116",
+      "name": "Cunnamulla Bridge (Warrego River)",
+      "point": [
+        145.6775,
+        -28.0714
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1109,
+      "amtdKm": 130.5
+    },
+    {
+      "id": "044156",
+      "name": "Charleville",
+      "point": [
+        146.2378,
+        -26.4025
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1092,
+      "amtdKm": 363.6
+    },
+    {
+      "id": "044157",
+      "name": "Murweh (Warrego River)",
+      "point": [
+        145.9433,
+        -27.0028
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1104,
+      "amtdKm": 275.0
+    },
+    {
+      "id": "044158",
+      "name": "Wyandra",
+      "point": [
+        145.9667,
+        -27.2483
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1105,
+      "amtdKm": 238.2
+    },
+    {
+      "id": "044181",
+      "name": "Hungerford (Paroo River)",
+      "point": [
+        144.4094,
+        -28.9972
+      ],
+      "river": "Paroo River",
+      "basin": "Paroo River",
+      "publishedRank": 1118
+    },
+    {
+      "id": "044189",
+      "name": "Bakers Bend",
+      "point": [
+        146.1094,
+        -26.7042
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1102
+    },
+    {
+      "id": "044194",
+      "name": "Nindigully (Moonie River)",
+      "point": [
+        148.8205,
+        -28.3547
+      ],
+      "river": "Moonie River",
+      "basin": "Moonie River",
+      "publishedRank": 1075,
+      "amtdKm": 105.4
+    },
+    {
+      "id": "044210",
+      "name": "Rocky (Warrego River)",
+      "point": [
+        145.735,
+        -28.4264
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1111
+    },
+    {
+      "id": "044233",
+      "name": "Bakers Bend Al",
+      "point": [
+        146.1089,
+        -26.7053
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1103
+    },
+    {
+      "id": "045003",
+      "name": "South Comongin (Bulloo River)",
+      "point": [
+        144.3386,
+        -26.9011
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1125,
+      "amtdKm": 382.0
+    },
+    {
+      "id": "045043",
+      "name": "Adavale (Blackwater Creek)",
+      "point": [
+        144.601,
+        -25.9105
+      ],
+      "river": "Blackwater Creek",
+      "basin": "Bulloo River",
+      "publishedRank": 1119,
+      "amtdKm": 13.0
+    },
+    {
+      "id": "045044",
+      "name": "Quilpie",
+      "point": [
+        144.2828,
+        -26.6147
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1121,
+      "amtdKm": 405.9
+    },
+    {
+      "id": "045045",
+      "name": "Thargomindah (Bulloo River)",
+      "point": [
+        143.8278,
+        -27.9947
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1127,
+      "amtdKm": 219.1
+    },
+    {
+      "id": "045066",
+      "name": "Milroy (Manual) (Bulloo River)",
+      "point": [
+        144.3472,
+        -26.0467
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1120
+    },
+    {
+      "id": "530045",
+      "name": "Torrens Creek Township (Torrens Creek)",
+      "point": [
+        145.0304,
+        -20.7676
+      ],
+      "river": "Torrens Creek",
+      "basin": "Cooper Creek",
+      "catalogueBasin": "Flinders River"
+    },
+    {
+      "id": "535104",
+      "name": "Glencoe Alert",
+      "point": [
+        146.1731,
+        -23.7167
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1151
+    },
+    {
+      "id": "535126",
+      "name": "Duneira (Barcoo River)",
+      "point": [
+        145.5683,
+        -24.5383
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1145
+    },
+    {
+      "id": "535152",
+      "name": "Gillespie (Barcoo River)",
+      "point": [
+        145.7872,
+        -24.5575
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1143
+    },
+    {
+      "id": "536003",
+      "name": "Blackall (Barcoo River)",
+      "point": [
+        145.4667,
+        -24.45
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1148,
+      "amtdKm": 379.6
+    },
+    {
+      "id": "536009",
+      "name": "Blackall Alert",
+      "point": [
+        145.4583,
+        -24.4267
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1147
+    },
+    {
+      "id": "536014",
+      "name": "Muttaburra Tm",
+      "point": [
+        144.5548,
+        -22.5928
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1131
+    },
+    {
+      "id": "536015",
+      "name": "Tragowel  (Landsborough River)",
+      "point": [
+        144.5162,
+        -22.4184
+      ],
+      "river": "Landsborough River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1129
+    },
+    {
+      "id": "537004",
+      "name": "Stonehenge (Thomson River)",
+      "point": [
+        143.2553,
+        -24.3356
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1137,
+      "amtdKm": 663.7
+    },
+    {
+      "id": "537007",
+      "name": "Bogewong (Thomson River)",
+      "point": [
+        143.5144,
+        -23.9283
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1135
+    },
+    {
+      "id": "538001",
+      "name": "Retreat (Barcoo River)",
+      "point": [
+        143.2814,
+        -25.1856
+      ],
+      "river": "Barcoo River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1162,
+      "amtdKm": 47.5
+    },
+    {
+      "id": "538012",
+      "name": "Jundah  (Thomson River)",
+      "point": [
+        143.0504,
+        -24.8291
+      ],
+      "river": "Thomson River",
+      "basin": "Cooper Creek",
+      "publishedRank": 1139
+    },
+    {
+      "id": "539035",
+      "name": "John Goleby Weir (HW) (Burnett River)",
+      "point": [
+        151.1458,
+        -25.2556
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 414,
+      "amtdKm": 324.7
+    },
+    {
+      "id": "539038",
+      "name": "Derra Tm",
+      "point": [
+        151.2436,
+        -25.6733
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 441,
+      "amtdKm": 6.4
+    },
+    {
+      "id": "539039",
+      "name": "Yarrol (Burnett River)",
+      "point": [
+        151.3475,
+        -24.9925
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 411,
+      "amtdKm": 380.8
+    },
+    {
+      "id": "539049",
+      "name": "Wharton Weir (Burnett River)",
+      "point": [
+        151.594,
+        -25.6167
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 446,
+      "amtdKm": 203.0
+    },
+    {
+      "id": "539051",
+      "name": "Wuruma Dam (HW) (Nogo River)",
+      "point": [
+        150.9894,
+        -25.1994
+      ],
+      "river": "Nogo River",
+      "basin": "Burnett River",
+      "publishedRank": 418,
+      "amtdKm": 22.8,
+      "dam": "Wuruma",
+      "side": "headwater"
+    },
+    {
+      "id": "539074",
+      "name": "Wuruma Dam (TW) (Nogo River)",
+      "point": [
+        150.9911,
+        -25.2017
+      ],
+      "river": "Nogo River",
+      "basin": "Burnett River",
+      "publishedRank": 420,
+      "amtdKm": 22.3,
+      "dam": "Wuruma",
+      "side": "tailwater"
+    },
+    {
+      "id": "539092",
+      "name": "Cania Dam (HW) (Three Moon Creek)",
+      "point": [
+        150.9831,
+        -24.65
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 406,
+      "amtdKm": 110.1,
+      "dam": "Cania",
+      "side": "headwater"
+    },
+    {
+      "id": "539108",
+      "name": "Paradise Dam (HW) (Burnett River)",
+      "point": [
+        151.9194,
+        -25.3511
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 470
+    },
+    {
+      "id": "539150",
+      "name": "Mingo Crossing (Burnett River)",
+      "point": [
+        151.7775,
+        -25.395
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 468
+    },
+    {
+      "id": "539151",
+      "name": "Mt Lawless (Burnett River)",
+      "point": [
+        151.655,
+        -25.545
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 467,
+      "amtdKm": 184.1
+    },
+    {
+      "id": "539152",
+      "name": "Paradise Dam Alert",
+      "point": [
+        151.9197,
+        -25.3511
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 471
+    },
+    {
+      "id": "539182",
+      "name": "Cania Dam Hw Alert",
+      "point": [
+        150.9833,
+        -24.65
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 405,
+      "amtdKm": 110.1,
+      "dam": "Cania",
+      "side": "headwater"
+    },
+    {
+      "id": "539183",
+      "name": "Ceratodus (Burnett River)",
+      "point": [
+        151.145,
+        -25.2831
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 415,
+      "amtdKm": 321.1
+    },
+    {
+      "id": "539184",
+      "name": "Cooranga (Boyne R) Alert",
+      "point": [
+        151.3328,
+        -25.7858
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 439,
+      "amtdKm": 31.8
+    },
+    {
+      "id": "539191",
+      "name": "Gayndah Flume (Burnett River)",
+      "point": [
+        151.6031,
+        -25.6217
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 448,
+      "amtdKm": 201.3
+    },
+    {
+      "id": "539197",
+      "name": "Mundubbera (Burnett River)",
+      "point": [
+        151.3,
+        -25.5936
+      ],
+      "river": "Burnett River",
+      "basin": "Burnett River",
+      "publishedRank": 445,
+      "amtdKm": 239.4
+    },
+    {
+      "id": "539203",
+      "name": "Wuruma Hw Alert",
+      "point": [
+        150.9894,
+        -25.1994
+      ],
+      "river": "Nogo River",
+      "basin": "Burnett River",
+      "publishedRank": 419,
+      "amtdKm": 22.8,
+      "dam": "Wuruma",
+      "side": "headwater"
+    },
+    {
+      "id": "539218",
+      "name": "Abercorn Alert",
+      "point": [
+        151.1306,
+        -25.1292
+      ],
+      "river": "Three Moon Creek",
+      "basin": "Burnett River",
+      "publishedRank": 409,
+      "amtdKm": 13.2
+    },
+    {
+      "id": "540039",
+      "name": "The Barrage (Mary River)",
+      "point": [
+        152.6236,
+        -25.5906
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 382
+    },
+    {
+      "id": "540046",
+      "name": "Peachester Tm",
+      "point": [
+        152.8416,
+        -26.8385
+      ],
+      "river": "Stanley River",
+      "basin": "Brisbane River",
+      "publishedRank": 100,
+      "amtdKm": 89.2
+    },
+    {
+      "id": "540056",
+      "name": "Carters (Boyne River)",
+      "point": [
+        151.3,
+        -26.25
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 432,
+      "amtdKm": 120.9
+    },
+    {
+      "id": "540059",
+      "name": "Peachester (Stanley River)",
+      "point": [
+        152.8416,
+        -26.8385
+      ],
+      "river": "Stanley River",
+      "basin": "Brisbane River",
+      "publishedRank": 99,
+      "amtdKm": 89.2
+    },
+    {
+      "id": "540081",
+      "name": "Walloon Tm",
+      "point": [
+        152.6928,
+        -27.6033
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 185,
+      "amtdKm": 36.9
+    },
+    {
+      "id": "540147",
+      "name": "Five Mile Bridge (Bremer River)",
+      "point": [
+        152.6681,
+        -27.6289
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 184,
+      "amtdKm": 41.0
+    },
+    {
+      "id": "540193",
+      "name": "Rosewood Alert",
+      "point": [
+        152.6044,
+        -27.6594
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 183,
+      "amtdKm": 49.9
+    },
+    {
+      "id": "540216",
+      "name": "Berry's Lagoon (Bremer River)",
+      "point": [
+        152.7444,
+        -27.6417
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "amtdKm": 26.5
+    },
+    {
+      "id": "540229",
+      "name": "Maroon Dam Hw Tm",
+      "point": [
+        152.6539,
+        -28.1842
+      ],
+      "river": "Burnett Creek",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 51,
+      "dam": "Maroon",
+      "side": "headwater"
+    },
+    {
+      "id": "540262",
+      "name": "Boondooma Dam (HW) (Boyne River)",
+      "point": [
+        151.4331,
+        -26.0969
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 435,
+      "amtdKm": 86.7,
+      "dam": "Boondooma",
+      "side": "headwater"
+    },
+    {
+      "id": "540314",
+      "name": "Spressers Bridge (Bremer River)",
+      "point": [
+        152.5906,
+        -27.6631
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 174
+    },
+    {
+      "id": "540364",
+      "name": "Moogerah Dam Hw Tm",
+      "point": [
+        152.5504,
+        -28.0314
+      ],
+      "river": "Reynolds Creek",
+      "basin": "Brisbane River",
+      "publishedRank": 190,
+      "amtdKm": 15.3,
+      "dam": "Moogerah",
+      "side": "headwater"
+    },
+    {
+      "id": "540365",
+      "name": "Toohills Crossing Tm",
+      "point": [
+        152.5231,
+        -27.9753
+      ],
+      "river": "Warrill Creek",
+      "basin": "Brisbane River"
+    },
+    {
+      "id": "540373",
+      "name": "Kilcoy Weir (DS) (Kilcoy Creek)",
+      "point": [
+        152.5819,
+        -26.92
+      ],
+      "river": "Kilcoy Creek",
+      "basin": "Brisbane River",
+      "sitePoint": [
+        152.57952,
+        -26.92101
+      ],
+      "sitePointSource": "providerStationIndex",
+      "amtdKm": 15.3
+    },
+    {
+      "id": "540388",
+      "name": "Rosewood (Bremer River)",
+      "point": [
+        152.6042,
+        -27.6592
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River",
+      "publishedRank": 182
+    },
+    {
+      "id": "540474",
+      "name": "Moogerah Dam HG (Reynolds Creek)",
+      "point": [
+        152.55,
+        -28.0314
+      ],
+      "river": "Reynolds Creek",
+      "basin": "Brisbane River",
+      "publishedRank": 189,
+      "amtdKm": 15.3,
+      "dam": "Moogerah",
+      "side": "headwater"
+    },
+    {
+      "id": "540475",
+      "name": "Maroon Dam (Burnett Creek)",
+      "point": [
+        152.6539,
+        -28.1842
+      ],
+      "river": "Burnett Creek",
+      "basin": "Logan-Albert Rivers",
+      "publishedRank": 49,
+      "amtdKm": 23.5,
+      "dam": "Maroon",
+      "side": "headwater"
+    },
+    {
+      "id": "540482",
+      "name": "Kilcoy Creek Alert",
+      "point": [
+        152.5794,
+        -26.9208
+      ],
+      "river": "Kilcoy Creek",
+      "basin": "Brisbane River"
+    },
+    {
+      "id": "540485",
+      "name": "Woodford Tm",
+      "point": [
+        152.7617,
+        -26.9356
+      ],
+      "river": "Stanley River",
+      "basin": "Brisbane River",
+      "publishedRank": 103,
+      "amtdKm": 64.9
+    },
+    {
+      "id": "540502",
+      "name": "Berrys Lagoon Al",
+      "point": [
+        152.7431,
+        -27.6422
+      ],
+      "river": "Bremer River",
+      "basin": "Brisbane River"
+    },
+    {
+      "id": "540513",
+      "name": "Moogerah Dam TW (Reynolds Creek)",
+      "point": [
+        152.5514,
+        -28.0267
+      ],
+      "river": "Reynolds Creek",
+      "basin": "Brisbane River",
+      "dam": "Moogerah",
+      "side": "tailwater"
+    },
+    {
+      "id": "540549",
+      "name": "Toohills Crossing (Warrill Creek)",
+      "point": [
+        152.5231,
+        -27.9753
+      ],
+      "river": "Warrill Creek",
+      "basin": "Brisbane River"
+    },
+    {
+      "id": "540591",
+      "name": "Maroon Dam TW (Burnett Creek)",
+      "point": [
+        152.6598,
+        -28.1813
+      ],
+      "river": "Burnett Creek",
+      "basin": "Logan-Albert Rivers",
+      "dam": "Maroon",
+      "side": "tailwater"
+    },
+    {
+      "id": "540698",
+      "name": "Boondooma Hw Al",
+      "point": [
+        151.4339,
+        -26.0956
+      ],
+      "river": "Boyne River",
+      "basin": "Burnett River",
+      "publishedRank": 436,
+      "amtdKm": 86.7,
+      "dam": "Boondooma",
+      "side": "headwater"
+    },
+    {
+      "id": "540706",
+      "name": "Tiaro (Mary River)",
+      "point": [
+        152.5775,
+        -25.7244
+      ],
+      "river": "Mary River",
+      "basin": "Mary River (Qld)",
+      "publishedRank": 381
+    },
+    {
+      "id": "540754",
+      "name": "Kents Lagoon  (Warrill Creek)",
+      "point": [
+        152.633,
+        -27.878
+      ],
+      "river": "Warrill Creek",
+      "basin": "Brisbane River"
+    },
+    {
+      "id": "541033",
+      "name": "Coolmunda Dam HG (Macintyre Brook)",
+      "point": [
+        151.2167,
+        -28.4333
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1033,
+      "amtdKm": 78.0,
+      "dam": "Coolmunda",
+      "side": "headwater"
+    },
+    {
+      "id": "541036",
+      "name": "Swanfels (Swan Creek)",
+      "point": [
+        152.2833,
+        -28.1667
+      ],
+      "river": "Swan Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 880,
+      "amtdKm": 35.6
+    },
+    {
+      "id": "541039",
+      "name": "Brosnans Barn (Condamine River)",
+      "point": [
+        152.3167,
+        -28.3333
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 872,
+      "amtdKm": 1167.0
+    },
+    {
+      "id": "541107",
+      "name": "Inglewood Bridge (Macintyre Brook)",
+      "point": [
+        151.0825,
+        -28.4133
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1039
+    },
+    {
+      "id": "541108",
+      "name": "Woodspring Alert",
+      "point": [
+        151.1381,
+        -28.3614
+      ],
+      "river": "Canning Creek",
+      "basin": "Border Rivers",
+      "publishedRank": 1037
+    },
+    {
+      "id": "541112",
+      "name": "Barongarook Alert",
+      "point": [
+        151.4622,
+        -28.4314
+      ],
+      "river": "Macintyre Brook",
+      "basin": "Border Rivers",
+      "publishedRank": 1028
+    },
+    {
+      "id": "542009",
+      "name": "Thallon Bridge (Moonie River)",
+      "point": [
+        148.8564,
+        -28.6328
+      ],
+      "river": "Moonie River",
+      "basin": "Moonie River",
+      "publishedRank": 1077
+    },
+    {
+      "id": "542019",
+      "name": "Condamine (Condamine River)",
+      "point": [
+        150.1314,
+        -26.9267
+      ],
+      "river": "Condamine River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 947
+    },
+    {
+      "id": "543005",
+      "name": "Surat (Balonne River)",
+      "point": [
+        149.0639,
+        -27.15
+      ],
+      "river": "Balonne River",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 957,
+      "amtdKm": 405.9
+    },
+    {
+      "id": "543010",
+      "name": "Roma (Bungil Creek)",
+      "point": [
+        148.795,
+        -26.5711
+      ],
+      "river": "Bungil Creek",
+      "basin": "Condamine-Culgoa Rivers",
+      "publishedRank": 961
+    },
+    {
+      "id": "543026",
+      "name": "Roma Taroom Road (Mooga Creek)",
+      "point": [
+        148.8009,
+        -26.4132
+      ],
+      "river": "Mooga Creek",
+      "basin": "Condamine-Culgoa Rivers"
+    },
+    {
+      "id": "544015",
+      "name": "Caiwarro (Paroo River)",
+      "point": [
+        144.7833,
+        -28.6833
+      ],
+      "river": "Paroo River",
+      "basin": "Paroo River",
+      "publishedRank": 1117,
+      "amtdKm": 57.3
+    },
+    {
+      "id": "544019",
+      "name": "Cunnamulla Weir (Warrego River)",
+      "point": [
+        145.6833,
+        -28.1167
+      ],
+      "river": "Warrego River",
+      "basin": "Warrego River",
+      "publishedRank": 1110,
+      "amtdKm": 124.5,
+      "sitePoint": [
+        145.6866,
+        -28.11688
+      ],
+      "sitePointSource": "providerStationIndex"
+    },
+    {
+      "id": "544064",
+      "name": "Patricia  Park (Blackwater Creek)",
+      "point": [
+        144.7657,
+        -25.6894
+      ],
+      "river": "Blackwater Creek",
+      "basin": "Bulloo River"
+    },
+    {
+      "id": "545001",
+      "name": "Autumnvale (Bulloo River)",
+      "point": [
+        143.9192,
+        -27.7633
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1126,
+      "amtdKm": 252.7
+    },
+    {
+      "id": "545007",
+      "name": "Quilpie (Bulloo River)",
+      "point": [
+        144.2833,
+        -26.6167
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River",
+      "publishedRank": 1122,
+      "amtdKm": 405.9
+    },
+    {
+      "id": "545010",
+      "name": "Milroy Tm (Bulloo River)",
+      "point": [
+        144.3533,
+        -26.0556
+      ],
+      "river": "Bulloo River",
+      "basin": "Bulloo River"
+    }
+  ],
+  "links": [
+    {
+      "from": "035284",
+      "to": "035049",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "035284",
+        "535152"
+      ]
+    },
+    {
+      "from": "035049",
+      "to": "535152",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "035284",
+        "535152"
+      ]
+    },
+    {
+      "from": "535152",
+      "to": "035259",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "535152",
+        "535126"
+      ]
+    },
+    {
+      "from": "035259",
+      "to": "535126",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "535152",
+        "535126"
+      ]
+    },
+    {
+      "from": "535126",
+      "to": "036155",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "535126",
+        "536009"
+      ]
+    },
+    {
+      "from": "036155",
+      "to": "536009",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "535126",
+        "536009"
+      ]
+    },
+    {
+      "from": "536009",
+      "to": "536003",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "536009",
+        "036169"
+      ]
+    },
+    {
+      "from": "536003",
+      "to": "036169",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "036169",
+      "to": "535104",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "036169",
+        "036026"
+      ]
+    },
+    {
+      "from": "535104",
+      "to": "036026",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "036169",
+        "036026"
+      ]
+    },
+    {
+      "from": "538001",
+      "to": "038018",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "537007",
+      "to": "037040",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "537007",
+        "538012"
+      ]
+    },
+    {
+      "from": "537004",
+      "to": "038037",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "037040",
+      "to": "538012",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "537004",
+        "538012"
+      ]
+    },
+    {
+      "from": "037040",
+      "to": "038037",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539182",
+      "to": "039165",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539092",
+      "to": "039165",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039319",
+      "to": "039000",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539218",
+      "to": "039000",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539039",
+      "to": "539035",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539035",
+      "to": "539183",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539035",
+      "to": "039318",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039320",
+      "to": "039073",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039320",
+      "to": "539197",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039073",
+      "to": "539049",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539197",
+      "to": "539049",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539049",
+      "to": "039323",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039320",
+        "039323"
+      ]
+    },
+    {
+      "from": "539049",
+      "to": "539191",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039323",
+      "to": "039191",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039323",
+        "039193"
+      ]
+    },
+    {
+      "from": "539191",
+      "to": "039191",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039191",
+      "to": "039193",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039191",
+      "to": "539151",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "039193",
+      "to": "539150",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039193",
+        "039184"
+      ]
+    },
+    {
+      "from": "539151",
+      "to": "539150",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039193",
+        "039184"
+      ]
+    },
+    {
+      "from": "539150",
+      "to": "039184",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039193",
+        "039184"
+      ]
+    },
+    {
+      "from": "539150",
+      "to": "539108",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039193",
+        "539108"
+      ]
+    },
+    {
+      "from": "539150",
+      "to": "539152",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "039193",
+        "539152"
+      ]
+    },
+    {
+      "from": "039236",
+      "to": "539074",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539051",
+      "to": "539074",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539203",
+      "to": "539074",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540314",
+      "to": "040549",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "540314",
+        "540388"
+      ]
+    },
+    {
+      "from": "540314",
+      "to": "540193",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "540314",
+        "540081"
+      ]
+    },
+    {
+      "from": "040549",
+      "to": "540147",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "540314",
+        "540081"
+      ]
+    },
+    {
+      "from": "540193",
+      "to": "540147",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040824",
+      "to": "040688",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040688",
+      "to": "040833",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040833",
+      "to": "040203",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040203",
+      "to": "540706",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "040833",
+        "540039"
+      ]
+    },
+    {
+      "from": "540056",
+      "to": "540262",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540056",
+      "to": "540698",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540056",
+      "to": "040722",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540262",
+      "to": "040455",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540698",
+      "to": "040455",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040722",
+      "to": "040455",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040455",
+      "to": "539184",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "539184",
+      "to": "539038",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040832",
+      "to": "040946",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040832",
+      "to": "040754",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540059",
+      "to": "040627",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540046",
+      "to": "040627",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "040627",
+      "to": "040820",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "540485",
+        "040820"
+      ]
+    },
+    {
+      "from": "540475",
+      "to": "040677",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "541112",
+      "to": "041457",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "541112",
+        "041137"
+      ]
+    },
+    {
+      "from": "541112",
+      "to": "541033",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "541112",
+        "041137"
+      ]
+    },
+    {
+      "from": "041457",
+      "to": "041406",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "541112",
+        "041406"
+      ]
+    },
+    {
+      "from": "541033",
+      "to": "041137",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "541112",
+        "041137"
+      ]
+    },
+    {
+      "from": "041406",
+      "to": "541107",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "041406",
+        "041520"
+      ]
+    },
+    {
+      "from": "541107",
+      "to": "041520",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "041406",
+        "041520"
+      ]
+    },
+    {
+      "from": "541039",
+      "to": "041463",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041463",
+      "to": "041494",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041463",
+      "to": "041535",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041503",
+      "to": "041357",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041503",
+      "to": "041534",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041357",
+      "to": "041473",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041534",
+      "to": "041473",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041411",
+      "to": "042048",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "041517",
+      "to": "042048",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "042048",
+      "to": "542019",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "041517",
+        "542019"
+      ]
+    },
+    {
+      "from": "541036",
+      "to": "041343",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "541036",
+      "to": "041530",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "044194",
+      "to": "042105",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "042105",
+      "to": "542009",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "044194",
+        "542009"
+      ]
+    },
+    {
+      "from": "043033",
+      "to": "043074",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "043033",
+        "543010"
+      ]
+    },
+    {
+      "from": "043074",
+      "to": "543010",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "043033",
+        "543010"
+      ]
+    },
+    {
+      "from": "043063",
+      "to": "543005",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "044156",
+      "to": "044189",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "044156",
+        "044158"
+      ]
+    },
+    {
+      "from": "044189",
+      "to": "044233",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "044156",
+        "044158"
+      ]
+    },
+    {
+      "from": "044233",
+      "to": "044157",
+      "basis": "published-order",
+      "sources": [
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; verified upstream and downstream Geofabric anchors bracket this interval",
+      "anchors": [
+        "044156",
+        "044158"
+      ]
+    },
+    {
+      "from": "045044",
+      "to": "045003",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "045003",
+      "to": "545001",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "545001",
+      "to": "045045",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "bomClassifications"
+      ],
+      "note": "Same named watercourse; BoM published station order; surveyed river distances corroborate the order"
+    },
+    {
+      "from": "540475",
+      "to": "540591",
+      "basis": "dam-sides",
+      "sources": [
+        "bomDirectory",
+        "bomServiceSpecification"
+      ],
+      "note": "BoM identifies headwater and tailwater instruments at the same named dam. The link follows headwater to tailwater without using water-level readings."
+    },
+    {
+      "from": "540364",
+      "to": "540513",
+      "basis": "dam-sides",
+      "sources": [
+        "bomDirectory",
+        "bomServiceSpecification"
+      ],
+      "note": "BoM identifies headwater and tailwater instruments at the same named dam. The link follows headwater to tailwater without using water-level readings."
+    },
+    {
+      "from": "536015",
+      "to": "036037",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomDirectory",
+        "bomClassifications"
+      ],
+      "note": "The BoM table and mapped Landsborough River place Tragowel upstream of Muttaburra."
+    },
+    {
+      "from": "036037",
+      "to": "036013",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomDirectory",
+        "bomClassifications"
+      ],
+      "note": "The mapped Muttaburra river site is above Camoola Park; no relative order to the nearby Muttaburra automatic instrument is asserted."
+    },
+    {
+      "from": "536014",
+      "to": "036013",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomDirectory",
+        "bomClassifications"
+      ],
+      "note": "The mapped Muttaburra automatic site is on the upper Thomson system above Camoola Park."
+    },
+    {
+      "from": "530045",
+      "to": "036013",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ],
+      "note": "The mapped Torrens Creek Township gauge drains into the upper Thomson system above Camoola Park. The BoM map and 2026 specification place it in Cooper basin, correcting the catalogue basin label. Intermediate gauges are omitted."
+    },
+    {
+      "from": "544015",
+      "to": "044181",
+      "basis": "network-map",
+      "sources": [
+        "bomWarregoParooMap",
+        "bomClassifications",
+        "providerStationIndex"
+      ],
+      "note": "The mapped Paroo channel reaches Caiwarro before Hungerford; this supplies the receiving warning area with a connection even when the Eulo gauge is outside its selected footprint."
+    },
+    {
+      "from": "045066",
+      "to": "545007",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ],
+      "note": "The mapped Milroy monitoring reach on the Bulloo River is above Quilpie. No relative order between the manual and telemetry Milroy instruments is asserted."
+    },
+    {
+      "from": "545010",
+      "to": "545007",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ],
+      "note": "The mapped Milroy monitoring reach on the Bulloo River is above Quilpie. No relative order between the manual and telemetry Milroy instruments is asserted."
+    },
+    {
+      "from": "541108",
+      "to": "041519",
+      "basis": "network-map",
+      "sources": [
+        "bomBorderMap",
+        "bomServiceSpecification",
+        "bomDirectory"
+      ],
+      "note": "The mapped Woodspring site on Canning Creek is above the Macintyre Brook receiving reach at Booba Sands. Its relative order to the older Woodspring manual site is not asserted."
+    },
+    {
+      "from": "544064",
+      "to": "045043",
+      "basis": "network-map",
+      "sources": [
+        "bomBullooCooperMap",
+        "bomSurvey",
+        "bomCatalogue"
+      ],
+      "note": "Reviewed public station location on the mapped Blackwater Creek above Adavale, corroborated by its position before Adavale in the BoM survey listing. No gauge-zero elevation is used as direction evidence."
+    },
+    {
+      "from": "543026",
+      "to": "543010",
+      "basis": "network-map",
+      "sources": [
+        "bomLowerCondamineMap",
+        "bomCatalogue"
+      ],
+      "note": "Reviewed location of the Moga/Mooga Creek monitor on the mapped tributary above the Roma Bungil Creek gauges. No order relative to the Tabers gauge above the confluence is asserted."
+    },
+    {
+      "from": "540754",
+      "to": "040445",
+      "basis": "network-map",
+      "sources": [
+        "bomBrisbaneMap",
+        "bomServiceSpecification",
+        "bomDirectory",
+        "bomCatalogue"
+      ],
+      "note": "Reviewed BoM station location on the mapped Warrill Creek reach above Harrisville. No order relative to the Toohills Crossing instruments is asserted."
+    },
+    {
+      "from": "044116",
+      "to": "544019",
+      "basis": "survey-amtd",
+      "sources": [
+        "bomSurvey",
+        "providerStationIndex"
+      ],
+      "note": "Cunnamulla Bridge AMTD 130.5 km is above Cunnamulla Weir AMTD 124.5 km. The 2024 provider location corroborates AWRC 423202C despite the older directory coordinate discrepancy."
+    },
+    {
+      "from": "544019",
+      "to": "044210",
+      "basis": "network-map",
+      "sources": [
+        "bomWarregoParooMap",
+        "providerStationIndex"
+      ],
+      "note": "The mapped Warrego channel continues below Cunnamulla Weir to Rocky."
+    }
+  ],
+  "equivalentSites": [
+    {
+      "from": "041532",
+      "to": "041477",
+      "basis": "survey-site",
+      "sources": [
+        "bomSurvey",
+        "bomDirectory"
+      ],
+      "note": "Both Connolly Dam instruments have AMTD 21.7 km and catalogue locations 39 m apart; only their external ordering is shared."
+    },
+    {
+      "from": "540549",
+      "to": "540365",
+      "basis": "documented-site",
+      "sources": [
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ],
+      "note": "The 2026 specification lists both Toohills Crossing instruments together on page 63; their catalogue locations coincide."
+    },
+    {
+      "from": "540502",
+      "to": "540216",
+      "basis": "documented-site",
+      "sources": [
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ],
+      "note": "The 2026 specification groups these Berrys Lagoon instruments on page 63; their locations are 140 m apart on the same river reach."
+    },
+    {
+      "from": "540229",
+      "to": "540475",
+      "basis": "documented-site",
+      "sources": [
+        "bomClassifications",
+        "bomCatalogue"
+      ],
+      "note": "Both source names identify Maroon Dam headwater instruments and their catalogue locations coincide."
+    },
+    {
+      "from": "540474",
+      "to": "540364",
+      "basis": "survey-site",
+      "sources": [
+        "bomSurvey",
+        "moogerahOwner",
+        "bomServiceSpecification"
+      ],
+      "note": "Both Moogerah headwater gauges have AMTD 15.3 km and are 39 m apart. Seqwater identifies Reynolds Creek, correcting the older directory label for 540474."
+    },
+    {
+      "from": "540373",
+      "to": "540482",
+      "basis": "documented-site",
+      "sources": [
+        "providerStationIndex",
+        "bomDirectory",
+        "bomCatalogue"
+      ],
+      "note": "Provider AWRC 143312A identifies the downstream Kilcoy Weir site at the published provider location, 26 m from the Alert location. The two network positions differ by only 12 m; no relative order between the instruments is asserted."
+    }
+  ],
+  "unresolvedStations": [
+    {
+      "id": "540795",
+      "name": "Limestone Park Detention Basin",
+      "point": [
+        152.7657,
+        -27.6211
+      ],
+      "reason": "No reviewed outlet-to-river or downstream-gauge connection has been established. Keep readings and graphs available with order unconfirmed.",
+      "sources": [
+        "limestoneFactSheet",
+        "bomServiceSpecification",
+        "bomCatalogue"
+      ]
+    }
+  ]
+}

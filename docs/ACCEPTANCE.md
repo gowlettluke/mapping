@@ -466,3 +466,29 @@ with 45, 61 and 60 stations and synthetic observations. Every diagram card stays
 within its page at a minimum height of 62 pixels. All 762 PDF links have valid
 destinations, text stays within page bounds, and graph pages retain four images
 per page. No live readings or private station data enter the reference or tests.
+
+## Remaining gauge order review — 5 November 2026
+
+The follow-up review checks all 70 unconfirmed entries in the same 14 captured
+public warning selections. Reviewed BoM survey distances, station lists bracketed
+by connected network anchors, and official river-map connections add 67 locations.
+The reference now contains 1,540 stations and 17,037 downstream relationships,
+retaining all 1,473 preceding stations and their 15,058 relationships. Source IDs,
+locations and basin checks remain mandatory. The committed evidence file records
+source URLs, publication dates and the basis for each reviewed connection.
+
+Unconfirmed entries fall from 70 to one. The two Kilcoy instruments are confirmed
+at the same river site, without a relative-order arrow; their observations and
+graphs stay separate. Six documented equivalent-site pairs share only external
+connections. Headwater and tailwater instruments remain distinct. Limestone Park
+Detention Basin stays unconfirmed because a reliable outlet-to-river connection
+has not been established. These are public-catalogue test results, not a measured
+match rate for the private QFD feed. See [the detailed review](GAUGE-ORDER-REVIEWS.md).
+
+All 208 JavaScript tests, 24 Python builder/evidence tests and 49 JavaScript/asset
+checks pass. Native-canvas and production PDF checks cover five public warning
+areas with 45, 61, 60, 38 and eight stations using synthetic observations. Diagram
+cards stay within their pages at a minimum height of 62 pixels. All 1,087 PDF
+links have valid destinations, text stays within page bounds, and graph pages
+retain four images per page. No live readings or private station data are
+committed.

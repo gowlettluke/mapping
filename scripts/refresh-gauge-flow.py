@@ -518,15 +518,21 @@ def build(cache, output, offline=False):
     lookup = {record["id"]: record for record in records}
     if any(record["id"] in lookup[target]["downstream"] for record in records for target in record["downstream"]):
         raise RuntimeError("Reference contains reciprocal station ordering")
+    # Supplement channel matching with explicitly reviewed public BoM station
+    # order, survey and map evidence. Each identity is checked against the
+    # current catalogue, and conflicting/reciprocal paths fail the rebuild.
+    from gauge_order_reviews import merge_reviews
+    records, order_reviews = merge_reviews(catalogue, records, json.loads((ROOT / "data/gauge-order-reviews.json").read_text()))
     directory_date = re.search(r"Date:\s*(\d{2}/\d{2}/\d{4})", directory_text)
     result = {
         "schemaVersion": 1, "retrievedUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(), "extent": EXTENT,
-        "attribution": "Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric V3.3 via Digital Atlas of Australia, Geoscience Australia; National Flood Gauge Network",
-        "sources": {"stations": CATALOGUE, "stationDirectory": DIRECTORY, "networkGauges": NETWORK + "3/", "networkStreams": NETWORK + "7/", "flowSplits": NETWORK + "15/", "originalNetwork": ORIGINAL_NETWORK},
+        "attribution": "Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric V3.3 via Digital Atlas of Australia, Geoscience Australia; National Flood Gauge Network; © State of Queensland, 2024 (provider station index), CC BY 4.0",
+        "sources": {"stations": CATALOGUE, "stationDirectory": DIRECTORY, "networkGauges": NETWORK + "3/", "networkStreams": NETWORK + "7/", "flowSplits": NETWORK + "15/", "originalNetwork": ORIGINAL_NETWORK, "reviewedOrder": "data/gauge-order-reviews.json"},
         "stationDirectoryPublished": datetime.datetime.strptime(directory_date[1], "%d/%m/%Y").date().isoformat() if directory_date else None,
         "catalogueCount": len(catalogue), "stationCount": len(records), "cyclicMatchesOmitted": len(cyclic),
         "unresolvedDownstreamContinuations": len(unresolved),
-        "relationshipBasis": "Explicit directed paths; all plausible named-channel placements must agree. Co-located sites and missing continuations do not establish an order.",
+        "relationshipBasis": "Explicit directed paths plus reviewed public BoM station-order, survey and map evidence. All plausible named-channel placements must agree. Equivalent sites share external connections without an asserted internal order; missing continuations do not establish an order.",
+        "orderReviews": order_reviews,
         "methods": dict(collections.Counter(record["method"] for record in records)), "stations": sorted(records, key=lambda record: record["id"])
     }
     output.parent.mkdir(parents=True, exist_ok=True)
