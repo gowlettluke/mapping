@@ -2,7 +2,7 @@ import {aest,checkAbort} from './utils.js';
 import {externalPhotoLink} from './cameras.js';
 const ascii=s=>String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\u2010-\u2015]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/[^\x20-\x7e\n]/g,'?');
 export function photoLayout(count){const columns=count<=2?count:count<=4?2:3,rows=count<=2?1:2;return {columns,rows,width:(279-(columns-1)*4)/columns,height:(169-(rows-1)*4)/rows};}
-export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
+export function cameraPdf({jsPDF,snapshot,photos,overview,signal,photoFilterLabel=''}){
   if(!photos.length)throw new Error('No eligible photographs were retrieved; no PDF was generated');checkAbort(signal);
   if(typeof jsPDF!=='function')throw new Error('The bundled PDF library did not load. Reload the page.');
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true}),indexPages=Math.ceil(photos.length/24),photoStart=2+indexPages,photoPages=Math.ceil(photos.length/6),total=1+indexPages+photoPages;
@@ -13,7 +13,7 @@ export function cameraPdf({jsPDF,snapshot,photos,overview,signal}){
   doc.addImage(overview.data,'JPEG',ix,iy,dw,dh);
   photos.forEach((entry,i)=>{const m=entry.camera.marker;if(m)doc.link(ix+m.x/overview.width*dw-2.5,iy+m.y/overview.height*dh-2.5,5,5,{pageNumber:pageFor(i)});});
   doc.setFontSize(9);doc.setTextColor(30,47,60);const area=doc.splitTextToSize(ascii(snapshot.scopeLabel||snapshot.profileLabel+' warning area'),37),areaLines=area.slice(0,6);if(area.length>6)areaLines[5]=areaLines[5].slice(0,-3)+'...';doc.text(areaLines,250,30);
-  const summary=[photos.length+' included photographs','Camera numbers link to photos.','Only the selected warning footprint is used.',...(snapshot.floodNotice?['The outline marks the selected warning. Other warnings provide map context.']:[]),'Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.'];
+  const summary=[photos.length+' included photographs',...(photoFilterLabel?['Photo filter: '+photoFilterLabel+'.']:[]),'Camera numbers link to photos.','Only the selected warning footprint is used.',...(snapshot.floodNotice?['The outline marks the selected warning. Other warnings provide map context.']:[]),'Capture dates are distinguished from retrieval times.','Images may include an upstream unavailable-camera graphic.'];
   let sy=Math.max(49,30+areaLines.length*4+5);for(const line of summary){const wrapped=doc.splitTextToSize(ascii(line),37);doc.text(wrapped,250,sy);sy+=wrapped.length*4+5;}
   doc.setFontSize(7);doc.setTextColor(90);doc.text('Sources: TMR / BCC camera services; BoM warning via authenticated ArcGIS; Queensland boundaries; Esri basemap.',9,191);
   for(let page=0;page<indexPages;page++){checkAbort(signal);doc.addPage();header('Camera index',2+page);const subset=photos.slice(page*24,(page+1)*24);

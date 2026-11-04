@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {setCanvasFactory} from '../js/utils.js';
+import {setCanvasFactory,aest} from '../js/utils.js';
 import {projectedBounds} from '../js/geometry.js';
 
 function fakeCanvas(width=400,height=300){
@@ -11,26 +11,26 @@ function fakeCanvas(width=400,height=300){
   for(const method of ['save','restore','drawImage','fillRect','strokeRect','beginPath','closePath','rect','clip','translate','moveTo','lineTo','fill','stroke','strokeText','fillText','putImageData','arc','setLineDash'])ctx[method]=()=>{};
   return {width,height,getContext:()=>ctx,toDataURL:()=> 'data:image/png;base64,c3ludGhldGlj'};
 }
-function element(){return {value:'',checked:false,hidden:false,disabled:false,textContent:'',style:{},dataset:{},listeners:new Map(),classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(name,fn){this.listeners.set(name,fn);},append(){},replaceChildren(){},focus(){}};}
+function element(){return {children:[],value:'',checked:false,hidden:false,disabled:false,textContent:'',style:{},dataset:{},listeners:new Map(),classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(name,fn){this.listeners.set(name,fn);},append(...children){this.children.push(...children);},replaceChildren(...children){this.children=[...children];},focus(){}};}
 
 test('actual application exports and selected-warning analysis',async t=>{
-  const previous=Object.fromEntries(['document','localStorage','fetch','createImageBitmap','jspdf','setTimeout'].map(name=>[name,globalThis[name]])),html=await readFile(new URL('../index.html',import.meta.url),'utf8'),elements=new Map([...html.matchAll(/\bid="([^"]+)"/g)].map(match=>[match[1],element()])),downloads=[],documents=[],requests=[];
+  const previous=Object.fromEntries(['document','localStorage','fetch','createImageBitmap','jspdf','setTimeout'].map(name=>[name,globalThis[name]])),html=await readFile(new URL('../index.html',import.meta.url),'utf8'),elements=new Map([...html.matchAll(/\bid="([^"]+)"/g)].map(match=>[match[1],element()])),downloads=[],documents=[],requests=[],storage=new Map();
   const profiles=['thunderstorm','severeWeather','flooding'].map(profile=>({...element(),dataset:{profile}}));
   globalThis.document={body:{dataset:{},classList:{toggle(){}}},documentElement:{dataset:{}},getElementById:id=>{assert.ok(elements.has(id),'Missing UI element '+id);return elements.get(id);},querySelectorAll:()=>profiles,createElement:tag=>tag==='canvas'?fakeCanvas():{...element(),click(){if(this.download)downloads.push(this.download);}}};
-  globalThis.localStorage={getItem:()=>null,setItem(){}};
+  globalThis.localStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,String(value))};
   const immediateFetch=async url=>{requests.push(String(url));return new Response('synthetic image');};globalThis.fetch=immediateFetch;
   globalThis.createImageBitmap=async()=>({width:800,height:400,close(){}});
   globalThis.setTimeout=(fn,delay,...args)=>{const timer=previous.setTimeout(fn,delay,...args);if(delay>=30000)timer.unref();return timer;};
   class PDF {constructor(){this.texts=[];documents.push(this);}addPage(){}setFont(){}setFontSize(){}setTextColor(){}setDrawColor(){}line(){}rect(){}text(value){this.texts.push(String(value));}link(){}splitTextToSize(value){return [value];}addImage(){}output(){return new Blob(['synthetic PDF']);}}
   globalThis.jspdf={jsPDF:PDF};setCanvasFactory(fakeCanvas);
   t.after(()=>{for(const [name,value]of Object.entries(previous)){if(value===undefined)delete globalThis[name];else globalThis[name]=value;}});
-  const appUrl=new URL('../app.js',import.meta.url),source=(await readFile(appUrl,'utf8')).replace(/(from\s+|import\()(['"])(\.\.?\/[^'"]+)\2/g,(_,prefix,quote,specifier)=>prefix+quote+new URL(specifier,appUrl).href+quote),app=await import('data:text/javascript;base64,'+Buffer.from(source+'\nexport {state,makePdf,updateButtons,invalidate,extras,connection};').toString('base64'));
+  const appUrl=new URL('../app.js',import.meta.url),source=(await readFile(appUrl,'utf8')).replace(/(from\s+|import\()(['"])(\.\.?\/[^'"]+)\2/g,(_,prefix,quote,specifier)=>prefix+quote+new URL(specifier,appUrl).href+quote),app=await import('data:text/javascript;base64,'+Buffer.from(source+'\nexport {state,makePdf,updateButtons,invalidate,extras,connection,restoreCameraFilter,refreshCameras,cameraPhotoSelection};').toString('base64'));
   function reset(){
-    downloads.length=documents.length=requests.length=0;globalThis.fetch=immediateFetch;const now=new Date();
+    downloads.length=documents.length=requests.length=0;storage.clear();globalThis.fetch=immediateFetch;const now=new Date();
     Object.assign(app.state,{profile:'flooding',ready:true,pdf:null,pdfKind:null,cameraPhase:'ready',gaugeStatus:'ready',cameraNotices:[],flowDiagrams:[],floodScanned:true,
       snapshot:{active:true,profile:'flooding',profileLabel:'Flooding',generated:now,scopeLabel:'Selected BoM warning',extent:projectedBounds([150,-28,154,-24]),background:fakeCanvas(),warning:fakeCanvas(),context:{locator:{features:[]}}},gaugeMap:fakeCanvas(),
       cameras:[{id:'camera-1',name:'Selected camera',source:'test',sourceLabel:'Synthetic camera',point:[151,-26],url:'https://cameras.example/selected.jpg',capturedAt:null}],
-      gauges:[{id:'gauge-1',label:'G1',name:'Selected gauge',stationId:'000123',point:[151,-26],height:3.15,category:'minor',reportedCategory:'Minor',trend:'Rising',observedAt:now,updatedAt:now,graphUrl:'https://graphs.example/selected.png',sourceUrl:'https://graphs.example/station'}]});app.updateButtons();
+      gauges:[{id:'gauge-1',label:'G1',name:'Selected gauge',stationId:'000123',point:[151,-26],height:3.15,category:'minor',reportedCategory:'Minor',trend:'Rising',observedAt:now,updatedAt:now,graphUrl:'https://graphs.example/selected.png',sourceUrl:'https://graphs.example/station'}]});app.restoreCameraFilter();app.updateButtons();
   }
   await t.test('each button fetches only its own images and produces a distinctly named document',async()=>{
     reset();await app.makePdf('cameras');assert.deepEqual(requests,['https://cameras.example/selected.jpg']);assert.match(downloads[0],/^camera-situation-report-.*\.pdf$/);assert.match(documents[0].texts.join(' '),/Camera index/);assert.doesNotMatch(documents[0].texts.join(' '),/Gauge Index|Gauge Graphs/);
@@ -46,10 +46,26 @@ test('actual application exports and selected-warning analysis',async t=>{
     reset();app.state.gauges[0].graphUrl='';await app.makePdf('gauges');assert.equal(downloads.length,1);assert.equal(requests.length,0);assert.match(documents[0].texts.join(' '),/3\.15/);assert.match(documents[0].texts.join(' '),/Graph link not supplied|Graph unavailable/);
   });
   await t.test('a camera export with no eligible photos cannot turn into a gauge document',async()=>{
-    reset();app.state.cameras[0].capturedAt=new Date(Date.now()-2*3600000);await app.makePdf('cameras');assert.equal(downloads.length,0);assert.equal(documents.length,0);assert.match(elements.get('cameraStatus').textContent,/No camera PDF generated/);assert.equal(requests.length,0);
+    reset();app.state.profile=app.state.snapshot.profile='thunderstorm';app.restoreCameraFilter();app.state.cameras[0].capturedAt=new Date(Date.now()-2*3600000);await app.makePdf('cameras');assert.equal(downloads.length,0);assert.equal(documents.length,0);assert.match(elements.get('cameraStatus').textContent,/No camera PDF generated/);assert.equal(requests.length,0);
+  });
+  await t.test('flood camera PDFs include verified photos older than a day by default and retain their capture time',async()=>{
+    for(const kind of ['Flood Warning','Flood Watch']){reset();app.state.snapshot.floodDisplay={kind};const captured=new Date(Date.now()-25*3600000);app.state.cameras[0].capturedAt=captured;assert.equal(elements.get('cameraFilter').value,'all');await app.makePdf('cameras');assert.equal(downloads.length,1);assert.equal(requests.length,1);assert.match(documents[0].texts.join(' '),/Photo filter: Include all cameras/);assert.ok(documents[0].texts.join(' ').includes('Captured '+aest(captured)));}
+  });
+  await t.test('camera filters default and persist independently for every warning type',()=>{
+    reset();app.state.ready=false;const choose=profile=>profiles.find(p=>p.dataset.profile===profile).listeners.get('click')(),filter=elements.get('cameraFilter'),change=value=>{filter.value=value;filter.listeners.get('change')();};assert.equal(filter.value,'all');choose('thunderstorm');assert.equal(filter.value,'1h');change('verified-1h');choose('flooding');assert.equal(filter.value,'all');change('24h');choose('severeWeather');assert.equal(filter.value,'1h');choose('thunderstorm');assert.equal(filter.value,'verified-1h');choose('flooding');assert.equal(filter.value,'24h');assert.equal(storage.get('qldMapping.cameraFilter.flooding'),'24h');
+  });
+  await t.test('a camera filter updates the visible list and exported photos without regenerating maps',async()=>{
+    reset();const base=app.state.cameras[0],now=Date.now(),rows=[['fresh',now-15*60000],['old',now-2*3600000],['very-old',now-25*3600000],['unknown',null]];app.state.cameras=rows.map(([id,time])=>({...base,id,name:id,url:'https://cameras.example/'+id+'.jpg',capturedAt:time===null?null:new Date(time)}));const snapshot=app.state.snapshot,version=app.state.version,map=app.state.gaugeMap,filter=elements.get('cameraFilter');filter.value='24h';filter.listeners.get('change')();assert.equal(elements.get('cameraList').children.length,3);assert.equal(app.state.cameras.length,4);assert.equal(app.state.snapshot,snapshot);assert.equal(app.state.version,version);assert.equal(app.state.gaugeMap,map);
+    filter.value='verified-1h';filter.listeners.get('change')();assert.equal(elements.get('cameraList').children.length,1);await app.makePdf('cameras');assert.deepEqual(requests,['https://cameras.example/fresh.jpg']);assert.equal(downloads.length,1);assert.match(documents[0].texts.join(' '),/Photo filter: Only verified photos within 1 hour/);assert.match(elements.get('cameraStatus').textContent,/2 older than the selected age limit, 1 with unverified capture times/);
+  });
+  await t.test('excluding unverified cameras keeps older verified photos when no age limit is selected',async()=>{
+    reset();const base=app.state.cameras[0];app.state.cameras=[{...base,id:'old',url:'https://cameras.example/old.jpg',capturedAt:new Date(Date.now()-48*3600000)},{...base,id:'unknown',url:'https://cameras.example/unknown.jpg'}];const filter=elements.get('cameraFilter');filter.value='verified';filter.listeners.get('change')();await app.makePdf('cameras');assert.deepEqual(requests,['https://cameras.example/old.jpg']);assert.equal(downloads.length,1);assert.match(elements.get('cameraStatus').textContent,/1 with unverified capture times/);
+  });
+  await t.test('a filter with no matching photos disables only the camera export and requests no images',async()=>{
+    reset();const filter=elements.get('cameraFilter');filter.value='verified';filter.listeners.get('change')();assert.equal(elements.get('cameraPdf').disabled,true);assert.equal(elements.get('gaugePdf').disabled,false);assert.equal(elements.get('cameraList').children.length,0);await app.makePdf('cameras');assert.equal(requests.length,0);assert.equal(downloads.length,0);assert.match(elements.get('cameraStatus').textContent,/No camera PDF generated/);await app.makePdf('gauges');assert.deepEqual(requests,['https://graphs.example/selected.png']);assert.equal(downloads.length,1);
   });
   await t.test('changing the selection cancels either pending PDF without downloading old results',async()=>{
-    for(const kind of ['cameras','gauges']){reset();let release;globalThis.fetch=()=>new Promise(resolve=>{release=resolve;});const pending=app.makePdf(kind);assert.equal(app.state.pdfKind,kind);assert.equal(elements.get(kind==='gauges'?'cancelGaugePdf':'cancelPdf').hidden,false);app.invalidate();release(new Response('synthetic image'));await pending;assert.equal(downloads.length,0);assert.equal(app.state.pdf,null);assert.equal(app.state.pdfKind,null);assert.equal(elements.get('pdfProgress').hidden,true);assert.equal(elements.get('gaugePdfProgress').hidden,true);}
+    for(const kind of ['cameras','gauges']){reset();let release;globalThis.fetch=()=>new Promise(resolve=>{release=resolve;});const pending=app.makePdf(kind);assert.equal(app.state.pdfKind,kind);assert.equal(elements.get('cameraFilter').disabled,kind==='cameras');assert.equal(elements.get(kind==='gauges'?'cancelGaugePdf':'cancelPdf').hidden,false);app.invalidate();release(new Response('synthetic image'));await pending;assert.equal(downloads.length,0);assert.equal(app.state.pdf,null);assert.equal(app.state.pdfKind,null);assert.equal(elements.get('pdfProgress').hidden,true);assert.equal(elements.get('gaugePdfProgress').hidden,true);}
   });
   await t.test('camera exports remain available on both existing storm/weather profiles',async()=>{
     for(const profile of ['thunderstorm','severeWeather']){reset();app.state.profile=app.state.snapshot.profile=profile;app.updateButtons();assert.equal(elements.get('gaugePanel').hidden,true);assert.equal(elements.get('gaugePdf').disabled,true);await app.makePdf('cameras');assert.equal(downloads.length,1);assert.match(downloads[0],/^camera-situation-report-/);}
