@@ -28,6 +28,7 @@ export const CONFIG = {
     topoMetadata:"https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"
     ,floodWarnings:"https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/1"
     ,floodWatches:"https://hosting.wsapi.cloud.bom.gov.au/arcgis/rest/services/flood/National_Flood_Gauge_Network/FeatureServer/0"
+    ,floodNotices:"https://services1.arcgis.com/vkTwD8kHw2woKBqV/arcgis/rest/services/BOM_Land_Warnings_RO/FeatureServer"
   },
   rendering:{qld:[137.7,-29.3,154.2,-9],detection:[720,950],width:1500,height:1120,minimumRegionalKm:180,padding:.4},
   gauges:{observationAgeMinutes:120,feedAgeMinutes:45},

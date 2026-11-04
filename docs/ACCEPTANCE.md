@@ -24,7 +24,7 @@ Before using a new deployment with live data, verify:
 2. Compare current BoM warning extents with the map, including warnings near the coast and Queensland border. Both exports must show the same warning outline and surrounding regional context; LGA lines must stay inside the frame. The locator silhouette must follow the state coast/border.
 3. Cross-check report figures against each provider's council text view/API at its recorded update time. Include only unplanned council counts for warning-intersected LGAs, once per council; no combined rows. Missing, stale, incomplete or unmatched council data must produce a status note rather than a no-outage claim. Outage map polygons/labels still show whole-outage source geometry and counts.
 4. Compare the road text against QLDTraffic: major full closures, the LGA, road name and concise closure location. Lane reductions and 4WD-only access must not enter copied road text. Paste into the intended report editor and verify the three source links remain clickable.
-5. Check separate flood warning/watch selections, especially adjacent or disconnected areas. Treat “detected area” labels as raster matches, not verified official product identities. Confirm a changing warning requires regeneration rather than reusing stale selection scope.
+5. Compare the flood selector against current BoM warning products, including combined notices, final warnings and watches. Confirm one selection includes all its current catchments, with gauges/cameras from each and none from neighbouring warnings. Confirm a changed notice or partially rendered map requires a refresh, and that the full BoM notice link works.
 6. Check TMR and BCC cameras against the actual footprint. Ensure separate views at one location survive deduplication. Generate a PDF with a missing image, a known stale photo and an unverified capture time. Verify numbering, photo links and back-links after exclusions.
 7. Cancel generation and change tabs while work is running. Old report/camera results must not replace the newly selected scope. Test a no-warning state and an unavailable optional feed.
 
@@ -314,3 +314,11 @@ four-panel graph pages. Index and graph pages were rendered and inspected;
 image/text bounds, non-overlap and internal destinations were valid. Graphs and
 readings in that layout fixture are explicitly synthetic/unavailable.
 
+
+## BoM warning groups — 4 November 2026
+
+The selector now uses current BoM catchment records grouped by the published warning product ID. Compact titles link to the full original notice. Final records remain until their AEST expiry; expired/cancelled/test records and areas from superseded issues are excluded. Watches group by issuing office and UTC issue time. River diagram layout is unchanged.
+
+All 166 tests and 45 JavaScript syntax/asset checks pass. New unit checks cover combined disconnected catchments, similarly named rivers belonging to different warnings, latest-issue replacement, local expiry, cancellations, complete membership, source freshness/failure, watch grouping and abort handling. A fresh public-service query returned 21 Queensland catchment records and 14 warning groups, corresponding to the current BoM warning products. No live records are committed.
+
+Native-canvas integration verifies both JPEGs for combined selections, gauges in both catchments, adjacent-warning exclusion, independent warning/watch rendering, rejection of partial maps and changed notices, confirmed empty statewide output, disagreement between an empty list and an active WMS, and cancellation. Actual app event handlers were exercised with a synthetic DOM/services for the selector, catchment summary, source link, deselection guard and map/report generation. These checks do not access the private WMS; after deployment compare a combined warning and its gauges/cameras with the signed-in production services.

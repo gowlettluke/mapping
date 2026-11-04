@@ -28,5 +28,7 @@ export async function loadFloodReference(key,signal,{live=queryArcgis,bundled=bu
   catch(error){checkAbort(signal);return bundled(key,signal);}
 }
 // These are catchment-name geometry, never a cache of active warnings. Active
-// warnings/watches continue to be fetched through the authenticated WMS.
+// notice membership comes from current BoM records; the authenticated WMS
+// supplies the warning/watch images, colours and patterns.
 export const floodReference=(key,signal)=>cached('flood-reference:'+key,()=>loadFloodReference(key,signal));
+

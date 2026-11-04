@@ -1,6 +1,6 @@
 import {CONFIG} from '../config.js';
 import {projectedBounds,geographicBounds,fitExtent,contains,lgaName,path,transform} from './geometry.js';
-import {warningCanvas,analyseCanvas,components,maskContains,rasterIntersects} from './raster.js';
+import {warningCanvas,analyseCanvas,rasterIntersects} from './raster.js';
 import {lgas,loadPublic,majorNames} from './sources.js';
 import {basemap,composeProducts,exportProducts} from './renderer.js';
 import {normaliseRoads,buildReport} from './report.js';
@@ -9,22 +9,24 @@ import {aest,checkAbort} from './utils.js';
 import {floodReference} from './flood-references.js';
 import {nativeFloodLabels,catchmentFloodLabels,mapReservations} from './flood-display.js';
 import {withDeadline} from './connections.js';
-import {partitionFloodAreas,intersectFloodMask,clipFloodImage} from './flood-scope.js';
+import {intersectFloodMask,clipFloodImage} from './flood-scope.js';
+import {currentFloodNotices,loadFloodNotices} from './flood-notices.js';
 export function warningLgas(collection,masks){return collection.features.filter(f=>masks.some(m=>rasterIntersects(m,f.geometry)));}
 async function scan(connection,names,titles,extent,boundary,width,height,signal){const im=await connection.render('warning',extent,width,height,names,titles,signal),c=warningCanvas(im,width,height,extent,boundary);im.close?.();return {...analyseCanvas(c,extent),canvas:c};}
 export async function scanFloods(connection,signal,onProgress=()=>{}){
-  const boundary=await lgas(signal),extent=projectedBounds(CONFIG.rendering.qld),[w,h]=CONFIG.rendering.detection,output=[];
-  for(const [index,key] of ['floodWarnings','floodWatches'].entries()){
-    checkAbort(signal);const names=[CONFIG.profiles.flooding.warning[index]],titles=[CONFIG.profiles.flooding.titles[index]],kind=index?'Flood Watch':'Flood Warning';onProgress('Scanning '+kind+' areas...');
-    let detected;try{detected=await scan(connection,names,titles,extent,boundary,w,h,signal);}catch(error){checkAbort(signal);throw new Error(kind+' areas could not be loaded. '+error.message);}if(!detected.active)continue;
-    let refs={features:[]};try{refs=(await floodReference(key,signal)).collection;}catch{checkAbort(signal);}
-    output.push(...partitionFloodAreas(detected.mask,refs,{key,kind,names,titles,signal}));
-  }return output;
+  onProgress('Loading current BoM flood warnings and watches...');return currentFloodNotices(signal);
 }
 export async function generateSnapshot({connection,profile='thunderstorm',selection=null,tracking=false,outageLabelMinimum,signal,onProgress=()=>{}}){
-  const spec=CONFIG.profiles[profile],{width,height,detection,minimumRegionalKm,padding}=CONFIG.rendering,floodSelection=profile==='flooding'?selection:null;
+  const spec=CONFIG.profiles[profile],{width,height,detection,minimumRegionalKm,padding}=CONFIG.rendering;let floodSelection=profile==='flooding'?selection:null;
+  if(profile==='flooding'){
+    onProgress('Checking the selected BoM flood warning...');
+    if(floodSelection){const current=(await loadFloodNotices(floodSelection.key,signal)).find(notice=>notice.id===floodSelection.id);
+      if(!current||current.revision!==floodSelection.revision)throw new Error('The selected BoM flood warning changed. Refresh warnings and select it again.');floodSelection=current;
+    }else if((await currentFloodNotices(signal)).length)throw new Error('A BoM flood warning/watch is current. Refresh warnings and select one first.');
+  }
   onProgress('Loading Queensland LGA polygons...');const boundary=await lgas(signal);let active,extent,scopeMasks;
-  if(floodSelection){active=true;extent=fitExtent(floodSelection.extent,width,height,{minimumKm:minimumRegionalKm,padding});scopeMasks=floodSelection.components.map(c=>c.mask);}
+  if(floodSelection){active=true;extent=fitExtent(floodSelection.extent,width,height,{minimumKm:minimumRegionalKm,padding});scopeMasks=[];}
+  else if(profile==='flooding'){active=false;extent=fitExtent(projectedBounds(CONFIG.rendering.qld),width,height);}
   else {onProgress('Detecting the current '+spec.label.toLowerCase()+' warning...');const initial=await scan(connection,spec.warning,spec.titles,projectedBounds(CONFIG.rendering.qld),boundary,...detection,signal);active=initial.active;extent=active?fitExtent(initial.extent,width,height,{minimumKm:minimumRegionalKm,padding}):fitExtent(projectedBounds(CONFIG.rendering.qld),width,height);}
   onProgress('Loading shared infrastructure data and map background...');const [{data:context,notices},background]=await Promise.all([loadPublic(geographicBounds(extent),signal),basemap(extent,width,height,signal)]);checkAbort(signal);
   if(background.failed){notices.push(background.failed+' of '+background.total+' background tiles were unavailable.');if(background.failed===background.total){context.basemapUnavailable=true;const ctx=background.canvas.getContext('2d'),p=transform(extent,width,height);ctx.fillStyle='#f2eee5';for(const f of boundary.features){ctx.beginPath();path(ctx,f.geometry,p);ctx.fill('evenodd');}}}
@@ -32,14 +34,11 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
     scan(connection,floodSelection?.names||spec.warning,floodSelection?.titles||spec.titles,extent,boundary,width,height,signal),connection.render('radar',extent,width,height,CONFIG.radar.names,CONFIG.radar.titles,signal)
   ]);
   if(profile!=='flooding'&&weather.active!==active)throw new Error('The warning changed during generation. Generate maps again.');
-  if(profile==='flooding'&&!floodSelection&&weather.active)throw new Error('A flood warning/watch is active. Refresh and select its area first.');
+  if(profile==='flooding'&&!floodSelection&&weather.active)throw new Error('The BoM notice list and flood map are updating. Refresh warnings and try again.');
   if(active&&profile==='flooding'){
-    const selected=weather;
-    const scoped=floodSelection.scopeGeometries?.length?intersectFloodMask(selected.mask,floodSelection.scopeGeometries):null;
-    const refined=scoped?(scoped.active?[scoped]:[]):components(selected.mask).filter(c=>floodSelection.components.some(old=>maskContains(old.mask,c.sample)||maskContains(c.mask,old.sample)));
-    if(!selected.active||!refined.length)throw new Error('The selected flood area changed. Refresh flood areas and select it again.');
-    scopeMasks=refined.map(c=>c.mask);
-    if(scoped){weather.mask=scoped.mask;weather.canvas=clipFloodImage(weather.canvas,extent,floodSelection.scopeGeometries);}
+    const scoped=intersectFloodMask(weather.mask,floodSelection.scopeGeometries);
+    if(!weather.active||!scoped.active||floodSelection.scopeGeometries.some(geometry=>!intersectFloodMask(weather.mask,[geometry]).active))throw new Error('The map does not yet show every catchment in this BoM warning. Refresh warnings and try again.');
+    scopeMasks=[scoped.mask];weather.mask=scoped.mask;weather.canvas=clipFloodImage(weather.canvas,extent,floodSelection.scopeGeometries);
   }
   if(active&&profile!=='flooding')scopeMasks=[weather.mask];if(!active)scopeMasks=[];
   let floodDisplay=null;
@@ -59,7 +58,7 @@ export async function generateSnapshot({connection,profile='thunderstorm',select
   let trackingImage=null;if(tracking&&active&&spec.tracking.length){try{trackingImage=await connection.render('warning',extent,width,height,spec.tracking,[],signal);}catch{notices.push('Storm tracking was unavailable; it was omitted.');}}
   const affected=active?warningLgas(boundary,scopeMasks):boundary.features;if(active&&!affected.length)throw new Error('No Queensland LGA intersection could be verified for this warning');
   const generated=new Date(),roads=normaliseRoads(context.traffic,generated.getTime());
-  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,outageLabelMinimum,floodDisplay,
+  const snapshot={extent,active,profile,profileLabel:spec.label,generated,mask:weather.mask,scopeMasks,lgas:boundary,affected,context,background:background.canvas,warning:weather.canvas,radar,tracking:trackingImage,roads,demo:false,outageLabelMinimum,floodDisplay,floodNotice:floodSelection,
     scopeLabel:active?(floodSelection?.title||affected.slice(0,3).map(lgaName).join(' / ')+(affected.length>3?' and surrounds':'')):'No active warning detected in Queensland'};
   const products=composeProducts({...snapshot,outages:context.outages});const blobs=await exportProducts(products);radar.close?.();trackingImage?.close?.();
   return {snapshot,products,blobs,notices};
