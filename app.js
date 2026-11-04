@@ -49,9 +49,9 @@ async function generate(){if(!state.ready)return;invalidate();const run=state.ve
 }
 async function extras(snapshot,run,signal){
   if(!snapshot.active){state.cameraPhase='ready';$('cameraStatus').textContent='No active warning: camera reports are disabled.';$('affectedDistricts').textContent='No active warning.';return;}
-  state.cameraPhase='loading';updateButtons();$('cameraStatus').textContent='Checking cameras against the warning footprint...';
+  state.cameraPhase='loading';updateButtons();$('cameraStatus').textContent='Checking cameras against the warning footprint...';$('affectedDistricts').textContent='Checking disaster districts against the warning footprint...';
   const cameraPromise=demo?import('./js/demo.js').then(d=>({cameras:d.demoCameras(snapshot),notices:[]})):discoverCameras(connection,snapshot.scopeMasks,signal);
-  const districtPromise=snapshot.profile==='flooding'?Promise.resolve('District analysis is not required for the selected flood product.'):demo?Promise.resolve('Example District (synthetic)'):connection.districts(signal).then(collection=>warningLgas(collection,snapshot.scopeMasks).map(f=>f.properties?.PROP_DD||f.properties?.name).filter(Boolean).join(' · ')||'No intersecting districts detected.').catch(error=>'District source unavailable: '+errorText(error));
+  const districtPromise=demo?Promise.resolve('Example District (synthetic)'):connection.districts(signal).then(collection=>[...new Set(warningLgas(collection,snapshot.scopeMasks).map(f=>f.properties?.[CONFIG.arcgis.districts.nameField]||f.properties?.name).filter(Boolean))].join(' · ')||'No intersecting districts detected.').catch(error=>'District source unavailable: '+errorText(error));
   const [cameras,districts]=await Promise.allSettled([cameraPromise,districtPromise]);if(run!==state.version||signal.aborted)return;
   $('affectedDistricts').textContent=districts.status==='fulfilled'?districts.value:'District analysis unavailable.';
   if(cameras.status==='rejected'){state.cameraPhase='error';$('cameraStatus').textContent='Camera analysis unavailable: '+errorText(cameras.reason);updateButtons();return;}

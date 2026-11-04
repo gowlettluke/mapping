@@ -394,3 +394,21 @@ The vector PDF legend uses matching colour dots. Demo chart thresholds use the
 same palette. Source classification, thresholds and original BoM graph images
 are retained. All 187 tests and 48 JavaScript/asset checks pass, including
 cross-output badge-colour and text-contrast verification.
+
+## Flood disaster districts and action order — 5 November 2026
+
+Active flood warnings and watches now query the configured authenticated
+disaster district layer and intersect its polygons with the selected notice's
+scope masks, as the storm/weather profiles do. Disconnected catchments all
+contribute; neighbouring warnings shown for context do not. District names are
+listed once. Loading, source failure, no intersections and no active warning
+have distinct messages, and cancelled/stale lookups cannot update a new
+selection. The demo supplies its labelled synthetic district result.
+
+The flood selector precedes Generate maps in both entry pages, preserving
+document and keyboard action order. All 191 tests and 48 JavaScript/asset checks
+pass. Application-handler checks cover both flood products and existing weather
+profiles, independent source failure and stale results. Native-canvas checks
+also cover polygon holes, disconnected catchments and context exclusion. The
+authenticated live district source continues to require the user's ArcGIS
+session; no private district data is committed.
