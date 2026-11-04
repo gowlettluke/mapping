@@ -1,13 +1,13 @@
 import {aest,checkAbort} from './utils.js';
 import {externalPhotoLink} from './cameras.js';
 import {photoLayout} from './pdf.js';
-import {gaugeReading,gaugeTiming} from './gauges.js';
+import {gaugeReading,gaugeTiming,GAUGE_TEXT_COLOURS} from './gauges.js';
 import {gaugeFlowLabel,gaugeFlowSummary} from './gauge-flow.js';
 import {gaugeDiagramPdf} from './gauge-diagram.js';
 
 const ascii=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\u2010-\u2015]/g,'-').replace(/[^\x20-\x7e\n]/g,' ');
-const gaugeRows=20,gaugeTextColours={major:[177,32,47],moderate:[148,111,0],minor:[26,114,69]};
-const gaugeColour=gauge=>gaugeTextColours[gauge.category]||[45,56,65];
+const gaugeRows=20,gaugeTextColours=Object.fromEntries(Object.entries(GAUGE_TEXT_COLOURS).map(([category,hex])=>[category,[1,3,5].map(offset=>parseInt(hex.slice(offset,offset+2),16))]));
+const gaugeColour=gauge=>gaugeTextColours[gauge.category]||gaugeTextColours.unknown;
 const shortTime=date=>date?aest(date).replace(/ AEST$/,''):'Not supplied';
 export function gaugeReportPdf({jsPDF,snapshot,gauges=[],graphs=[],gaugeOverview=null,flowDiagrams=[],notes=[],signal,graphsPerPage=4}){
   if(!gauges.length)throw new Error('No river gauges are available for this report.');

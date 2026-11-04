@@ -5,6 +5,7 @@ import {gaugeFlowNetwork,gaugeDiagramLayout,drawGaugeDiagram,shortGaugeName,gaug
 import {orderGaugesByFlow} from '../js/gauge-flow.js';
 import {floodPdfPlan,floodReportPdf} from '../js/flood-pdf.js';
 import {setCanvasFactory} from '../js/utils.js';
+import {GAUGE_COLOURS,GAUGE_TEXT_COLOURS} from '../js/gauges.js';
 
 const gauge=(label,flowDownstream=[],extra={})=>({label,id:label,stationId:label,name:'Example River at '+label,river:'Example River',point:[145,-25],height:3.15,reportedCategory:'Minor',category:'minor',trend:'Steady',observedAt:new Date('2026-11-04T00:00:00Z'),updatedAt:new Date('2026-11-04T00:00:00Z'),flowDownstream,...extra});
 const edgeKeys=network=>network.edges.map(edge=>edge.from+'>'+edge.to).sort();
@@ -64,6 +65,15 @@ test('PDF river stations are readable vector text with preserved graph-link area
   const texts=[],snapshot={generated:new Date('2026-11-04T00:00:00Z')},page=gaugeDiagramLayout([gauge('G1',['G2'],{name:'Example River at Upper Bridge'}),gauge('G2',[],{name:'Example River at Lower Bridge'})]).pages[0];let size=0;
   const pdf={setDrawColor(){},setLineWidth(){},line(){},setFillColor(){},rect(){},circle(){},setFont(){},setFontSize(value){size=value;},setTextColor(){},splitTextToSize(value){return [value];},text(value){texts.push({value:String(value),size});}};
   const links=gaugeDiagramPdf(pdf,snapshot,page);assert.equal(links.length,2);assert.ok(texts.some(text=>text.value.includes('Upper Bridge')&&text.size>=9));assert.ok(texts.some(text=>text.value.includes('3.15 m')&&text.size>=9));assert.ok(links.every(link=>link.x>=9&&link.y>=26&&link.x+link.width<=288&&link.y+link.height<=192));
+});
+test('canvas and PDF diagrams share map status colours with readable badge numbers and readings',()=>{
+  const categories=['below','minor','moderate','major','unknown'],input=categories.map((category,i)=>gauge('G'+(i+1),i<4?['G'+(i+2)]:[],{category})),page=gaugeDiagramLayout(input).pages[0],snapshot={generated:new Date('2026-11-04T00:00:00Z')},circles=[],labels=new Map();let radius;
+  const ctx={measureText:value=>({width:String(value).length*8}),fillRect(){},strokeRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},closePath(){},arc(x,y,r){radius=r;},fill(){if(radius===18)circles.push(this.fillStyle);radius=null;},fillText(value){if(/^G\d+$/.test(value)&&this.textAlign==='center')labels.set(value,this.fillStyle);}};
+  setCanvasFactory((width,height)=>({width,height,getContext:()=>ctx}));drawGaugeDiagram(snapshot,page);
+  const rgb=hex=>[1,3,5].map(offset=>parseInt(hex.slice(offset,offset+2),16)),contrast=(a,b)=>{const luminance=colour=>rgb(colour).map(v=>{const s=v/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0),values=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (values[0]+.05)/(values[1]+.05);};
+  assert.deepEqual(circles,page.nodes.map(n=>GAUGE_COLOURS[n.gauge.category]));for(const node of page.nodes){const category=node.gauge.category;assert.ok(contrast(labels.get(node.label),GAUGE_COLOURS[category])>=4.5,'Gauge numbers remain legible on '+category+' badges');assert.ok(contrast(GAUGE_TEXT_COLOURS[category],'#ffffff')>=4.5,'Gauge readings remain legible on white');}
+  const pdfCircles=[],pdfLabels=new Map();let fillColour,textColour;const pdf={setDrawColor(){},setLineWidth(){},line(){},setFillColor(...value){fillColour=value;},rect(){},circle(x,y,r){if(r>1)pdfCircles.push(fillColour);},setFont(){},setFontSize(){},setTextColor(...value){textColour=value;},splitTextToSize:value=>[value],text(value,x,y,options){if(/^G\d+$/.test(value)&&options?.align==='center')pdfLabels.set(value,textColour);}};
+  gaugeDiagramPdf(pdf,snapshot,page);assert.deepEqual(pdfCircles,circles.map(rgb));for(const node of page.nodes)assert.deepEqual(pdfLabels.get(node.label),rgb(labels.get(node.label)));
 });
 test('PDF flow pages shift map, table, graph and camera destinations together',()=>{
   const gauges=Array.from({length:21},(_,index)=>gauge('G'+(index+1))),diagrams=[0,1].map(index=>({data:'synthetic flow '+index,width:1800,height:1080,nodes:[{label:gauges[index*20].label,x:100,y:200,width:400,height:138}]})),plan=floodPdfPlan(21,1,{flowDiagramPages:2}),links=[],titles=[],images=[];let page=1;

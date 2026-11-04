@@ -7,7 +7,7 @@ import {normaliseRoads} from './report.js';
 import {composeProducts,exportProducts} from './renderer.js';
 import {warningLgas} from './pipeline.js';
 import {catchmentFloodLabels,mapReservations} from './flood-display.js';
-import {normaliseGauges,selectGauges} from './gauges.js';
+import {normaliseGauges,selectGauges,GAUGE_COLOURS,GAUGE_TEXT_COLOURS} from './gauges.js';
 const polygon=(w,s,e,n)=>({type:'Polygon',coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]});
 const feature=(geometry,properties={})=>({type:'Feature',geometry,properties});
 const collection=features=>({type:'FeatureCollection',features});
@@ -47,7 +47,7 @@ export function demoPhotos(cameras){return cameras.map((camera,i)=>{const c=canv
 export function demoGauges(snapshot){const now=snapshot.generated.getTime(),features=['Minor','Moderate','Below minor','Unknown'].map((classification,i)=>feature({type:'Point',coordinates:[151.55+i*.12,-27.02-i*.04]},{station_id:'DEMO-'+(i+1),station_name:'Synthetic river gauge '+(i+1),river_height:[2.4,5.2,1.3,null][i],flood_classification:classification,trend:['Rising','Steady','Falling',''][i],observation_time:now-(i===3?3*60:15)*60000,last_updated:now-5*60000}));return selectGauges(normaliseGauges({collection:collection(features),sourceLabel:'Synthetic demonstration gauges'}),snapshot.scopeMasks).map((gauge,index)=>({...gauge,river:index===1?'Synthetic Tributary Creek':'Synthetic River',flowGroup:index===1?'Synthetic Tributary Creek':'Synthetic River',flowGroupId:index===1?'demo-tributary':'demo-main',flowOrder:'verified',flowDownstream:[['G3','G4'],['G3','G4'],['G4'],[]][index]}));}
 export function demoGaugeGraphs(gauges){return gauges.map((gauge,index)=>{const c=canvas(1400,430),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#243e48';ctx.font='bold 24px Arial';ctx.fillText(gauge.label+' - SYNTHETIC RIVER HEIGHT GRAPH',85,32);ctx.font='16px Arial';ctx.fillText('Demonstration only - not observations or forecasts',85,58);
   const x0=85,y0=80,w=1270,h=275;ctx.strokeStyle='#d7dfe2';ctx.lineWidth=1;for(let n=0;n<=8;n++){const y=y0+h-n/8*h;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+w,y);ctx.stroke();ctx.fillStyle='#354b58';ctx.fillText(n+' m',25,y+5);}
-  const thresholds=[[2,'Minor','#238566'],[4,'Moderate','#cd801f'],[6,'Major','#ba2434']];for(const [value,label,colour]of thresholds){const y=y0+h-value/8*h;ctx.strokeStyle=colour;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+w,y);ctx.stroke();ctx.fillStyle=colour;ctx.fillText(label,x0+8,y-7);}
+  const thresholds=[[2,'Minor','minor'],[4,'Moderate','moderate'],[6,'Major','major']];for(const [value,label,category]of thresholds){const y=y0+h-value/8*h;ctx.strokeStyle=GAUGE_COLOURS[category];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+w,y);ctx.stroke();ctx.fillStyle=GAUGE_TEXT_COLOURS[category];ctx.fillText(label,x0+8,y-7);}
   ctx.strokeStyle='#177ead';ctx.lineWidth=4;ctx.beginPath();for(let n=0;n<=100;n++){const value=Math.max(0,(gauge.height??2)*(.3+.7*n/100)+Math.sin(n/10)*(1-n/100)*.3),x=x0+n/100*w,y=y0+h-value/8*h;if(n)ctx.lineTo(x,y);else ctx.moveTo(x,y);}ctx.stroke();ctx.fillStyle='#354b58';for(let n=0;n<7;n++)ctx.fillText('Day '+(n+1),x0+n/6*(w-45),390);
   return {gauge,graph:{data:c.toDataURL('image/png'),width:c.width,height:c.height,format:'PNG',retrievedAt:new Date()}};
 });}
