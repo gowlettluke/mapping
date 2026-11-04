@@ -19,7 +19,12 @@ const names={
   river:['stream','river','watercourse','rivername','streamname'],
   basin:['basin','basinname','catchmentname']
 };
-export const GAUGE_COLOURS={major:'#ba2434',moderate:'#e68025',minor:'#e4c745',below:'#157f73',unknown:'#697783'};
+// Reported station status: green minor, yellow moderate, red major.
+// Below-minor readings stay blue; unknown readings stay neutral grey.
+export const GAUGE_COLOURS={major:'#b1202f',moderate:'#ffcc00',minor:'#1a7245',below:'#4b94b5',unknown:'#697783'};
+// Darker variants keep coloured readings legible against white paper/cards.
+export const GAUGE_TEXT_COLOURS={major:'#b1202f',moderate:'#946f00',minor:'#1a7245',below:'#346c8a',unknown:'#697783'};
+export const gaugeBadgeTextColour=category=>['moderate','below'].includes(category)?'#17222c':'#ffffff';
 
 function valuesFor(properties,fields){
   const values=new Map(Object.entries(properties).map(([name,value])=>[key(name),value]));

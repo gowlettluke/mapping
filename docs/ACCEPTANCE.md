@@ -383,3 +383,14 @@ PDF marker positions. Separate camera and gauge PDFs were generated through
 the production exporters; their links and page bounds were checked. No private
 observations or signed-in WMS requests are committed; that live-source check
 remains dependent on the organisation's ArcGIS session.
+
+## Gauge classification colours — 5 November 2026
+
+The gauge map, status key, on-screen cards, canvas/PDF river diagrams and PDF
+table now share a green/minor, yellow/moderate and red/major palette. Below
+minor is blue and unknown is grey. Darker text variants keep readings legible
+on white; dark numbers on yellow/blue badges retain at least 4.5:1 contrast.
+The vector PDF legend uses matching colour dots. Demo chart thresholds use the
+same palette. Source classification, thresholds and original BoM graph images
+are retained. All 187 tests and 48 JavaScript/asset checks pass, including
+cross-output badge-colour and text-contrast verification.
