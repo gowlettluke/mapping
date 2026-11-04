@@ -412,3 +412,28 @@ profiles, independent source failure and stale results. Native-canvas checks
 also cover polygon holes, disconnected catchments and context exclusion. The
 authenticated live district source continues to require the user's ArcGIS
 session; no private district data is committed.
+
+## Camera age and verification filters — 5 November 2026
+
+Flooding defaults to including all available camera photos, including verified
+captures older than one hour or one day. Storm/weather defaults retain the
+one-hour age limit. All profiles offer the same six dropdown choices: all,
+one-hour/twenty-four-hour age exclusions, unverified exclusions, and verified-only
+one-hour/twenty-four-hour limits. Preferences are stored per warning type.
+
+Changing the filter updates the camera list and PDF availability without
+regenerating maps or discarding the unfiltered in-scope camera collection.
+Unknown/invalid/implausibly future capture times stay unverified. Age-only
+filters keep those cameras; verified-only filters exclude them. Excluded images
+are not requested. Age, unverified and inaccessible counts remain distinct.
+Camera exports freeze their filter and evaluation time, and the dropdown is
+disabled during that export. Gauge exports remain independent. Each PDF states
+its filter; original capture times remain separate from retrieval times.
+
+All 202 tests and 49 JavaScript/asset checks pass. Checks cover strict age
+boundaries, default/remembered choices, visible-list/export agreement, no-match
+states, request isolation and cancellation. Native-canvas filtering and the
+production PDF exporter produced all/24h/verified-1h/verified-24h reports with
+8/6/2/4 synthetic photographs respectively. Text stays within page bounds and
+all 106 links have valid destinations. Original older and unverified timestamps
+remain labelled; no live or private camera images are committed.

@@ -82,6 +82,7 @@ small{font-weight:400;color:var(--muted);font-size:11px}
 a{color:var(--blue)}
 summary{cursor:pointer;font-weight:700;padding:7px 0}
 textarea{resize:vertical;min-height:220px;max-height:65vh;line-height:1.5}
+.camera-filter{display:block;max-width:420px;margin-bottom:10px}
 .camera-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .camera-item{padding:10px;background:var(--panel2);border:1px solid var(--line)}
 .camera-item strong,.camera-item small{display:block}
