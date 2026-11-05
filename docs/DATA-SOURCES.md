@@ -193,6 +193,11 @@ published openly by Geoscience Australia's Digital Atlas. The original BoM
 Geofabric service is also recorded in the reference provenance. Attribution:
 © Commonwealth of Australia (Bureau of Meteorology) 2022; Geofabric via Digital
 Atlas of Australia, Geoscience Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The supplementary [review file](../data/gauge-order-reviews.json) records
+BoM station-order, survey and network-map evidence, the May 2026 service-level
+specification, and the October 2024 Queensland provider station index.
+Provider index attribution: © State of Queensland, 2024,
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 This reference establishes network relationships, not flood travel times or
 real-time flow direction during tidal/overbank conditions.
 
@@ -224,6 +229,25 @@ position on one segment respects its `FlowDir`; colocated/nearby stations within
 50 m do not acquire an asserted relative order. Cyclic paths are excluded.
 The build retains compact station-to-station relationships, not the national
 stream geometry downloaded to derive them.
+
+`scripts/gauge_order_reviews.py` merges reviewed links only when each BoM ID,
+recorded catalogue location within 250 m, and catalogue basin still agree.
+Survey AMTD is distance along the river from its outlet; it orders only the same
+named watercourse and basin, never by height or gauge zero. Published-list links
+need two existing, connected network anchors bracketing the interval. Map links
+are explicit reviewed interpretations of the cited official networks and public
+station locations. Missing or moved stations and unconfirmed anchors are skipped;
+contradictory connections fail the rebuild.
+
+Six documented equivalent-site pairs share external connections while retaining
+separate station identities and observations. Their reviewed locations must be
+within 250 m, with source-backed provider coordinates permitted to corroborate an
+approximate catalogue point within 1 km. No relative order is assigned inside
+such a pair. Dam headwater and tailwater instruments cannot be merged or reversed
+by list position. The isolated Kilcoy instruments display **same river site**;
+they remain in the map, index and graph pages without an invented flow arrow.
+See [the review results](GAUGE-ORDER-REVIEWS.md) for source dates, corrections and
+the remaining unresolved detention basin.
 
 At runtime the selected live gauge must match a reference BoM station ID
 (leading zeroes preserved for display) and lie within 1,000 m of its catalogue
@@ -259,14 +283,15 @@ continuation beyond it remains a gap, never an assumed downstream connection.
 
 `--offline` rebuilds from complete cached station, named-stream and flow-split
 downloads plus the cached connector reaches. It makes no network requests and
-publishes only directed station paths explicitly present in those files.
+combines directed paths in those files with the committed reviewed evidence.
 Unresolved downstream continuations are counted in the JSON; they never create
-an inferred connection. The shipped 5 November 2026 (AEST) rebuild contains 1,473
+an inferred connection. The shipped 5 November 2026 (AEST) rebuild contains 1,540
 matched stations from a 1,945-station public catalogue, with one cyclic match
-excluded and no unresolved continuation in the downloaded topology. Of the 301
-additional matches, 283 have a confirmed relationship to another reference
-station; 18 are isolated matches. Three former relationships were removed because
-not every plausible channel placement agreed; a fourth linked two source records
-now matched to the same network gauge position. These are reference counts, not a
-claim about coverage of the user's private observation feed. Live gauges without
-a confident ID/location/path comparison remain marked **Order unconfirmed**.
+excluded and no unresolved continuation in the downloaded topology. The follow-up
+review adds 67 locations to the preceding 1,473-station reference and retains all
+15,058 of its downstream relationships; the current reference has 17,037.
+Across the same 14 captured public warning areas, unconfirmed entries fall from
+70 to one, with two Kilcoy instruments recognised as a shared river site. These
+are public-reference counts, not a measured coverage rate for the private QFD
+feed. Live gauges without a confident ID/location/path comparison remain marked
+**Order unconfirmed**.

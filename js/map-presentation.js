@@ -66,7 +66,7 @@ export function drawMapHeading(ctx,snapshot,purpose,width,{summary=''}={}){
 }
 export function mapFooter(ctx,snapshot,width,{gauges=false,radar=false}={}){
   ctx.font='11px Arial';const sources=snapshot.demo?'Synthetic fixtures — not operational observations.':gauges?'Sources: BoM / QFD river observations; BoM warning areas; Queensland Government boundaries, places and watercourses.':radar?'Sources: BoM warning areas and radar; Queensland Government boundaries, places and watercourses.':'Sources: BoM warning areas; Queensland Government; QLDTraffic; Queensland power outage feed.',credits=snapshot.context?.credits?.copyrightText||'Esri and contributors.';
-  return [sources,'Basemap: '+credits].flatMap(t=>wrapText(ctx,t,width-32));
+  return [sources,...(gauges?['Ordering: BoM / Geofabric; station index © State of Queensland 2024.']:[]),'Basemap: '+credits].flatMap(t=>wrapText(ctx,t,width-32));
 }
 export function drawRoads(ctx,roads,project){
   ctx.save();ctx.lineCap='round';ctx.lineJoin='round';for(const road of roads||[]){const style=ROAD_STYLES[road.condition==='closed'?'closed':'restricted'];

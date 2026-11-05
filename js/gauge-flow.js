@@ -15,6 +15,7 @@ export function validateGaugeFlowReference(data){
     if(!id||ids.has(id)||!validPoint(station.point)||!station.river||typeof station.river!=='string'||typeof station.basin!=='string'||!Array.isArray(station.downstream))throw new Error('Gauge flow reference contains an invalid station.');ids.add(id);
   }
   const incoming=new Map([...ids].map(id=>[id,0])),edges=new Map();for(const station of data.stations){const id=stationKey(station.id),targets=station.downstream.map(stationKey);if(targets.some(target=>!ids.has(target)||target===id)||new Set(targets).size!==targets.length)throw new Error('Gauge flow reference has invalid downstream connections.');edges.set(id,targets);for(const target of targets)incoming.set(target,incoming.get(target)+1);}
+  const byId=new Map(data.stations.map(station=>[stationKey(station.id),station]));for(const station of data.stations)if(station.equivalentSite!==undefined){const site=stationKey(station.equivalentSite),root=byId.get(site);if(!site||!root||stationKey(root.equivalentSite)!==site||wordKey(root.river)!==wordKey(station.river)||wordKey(root.basin)!==wordKey(station.basin)||station.downstream.some(id=>stationKey(byId.get(stationKey(id))?.equivalentSite)===site))throw new Error('Gauge flow reference has invalid equivalent-site connections.');}
   const queue=[...ids].filter(id=>!incoming.get(id));let visited=0;for(let i=0;i<queue.length;i++){visited++;for(const next of edges.get(queue[i])){incoming.set(next,incoming.get(next)-1);if(!incoming.get(next))queue.push(next);}}
   if(visited!==ids.size)throw new Error('Gauge flow reference contains cyclic connections.');return data;
 }
@@ -56,10 +57,11 @@ export function orderGaugesByFlow(gauges,reference=null){
   const riverBasins=new Map();for(const station of matched.values()){const river=wordKey(station.river);if(!riverBasins.has(river))riverBasins.set(river,new Set());riverBasins.get(river).add(wordKey(station.basin));}
   const selectedIds=new Set([...matched.values()].map(station=>stationKey(station.id))),connectedIds=new Set();
   for(const station of matched.values())for(const target of station.downstream){const id=stationKey(target);if(selectedIds.has(id)){connectedIds.add(stationKey(station.id));connectedIds.add(id);}}
+  const selectedSites=new Map();for(const station of matched.values())if(station.equivalentSite){const site=stationKey(station.equivalentSite);if(!selectedSites.has(site))selectedSites.set(site,new Set());selectedSites.get(site).add(stationKey(station.id));}
   const output=[];for(const [key,rows]of [...buckets].sort(([a],[b])=>a.localeCompare(b))){
     const first=matched.get(rows[0]),chains=directedChains(rows,matched);if(!chains){unknown.push(...rows);continue;}
-    chains.forEach((chain,index)=>{const split=chains.length>1,connected=connectedIds.has(stationKey(matched.get(chain[0]).id)),uncertain=chain.length===1&&!connected&&(split||matched.get(chain[0]).method==='named-river-consensus'),group=first.river+(riverBasins.get(wordKey(first.river)).size>1&&first.basin?' ('+first.basin+')':'')+(split?' — reach '+(index+1):'');
-      for(const gauge of chain)output.push({...gauge,river:first.river,basin:first.basin,flowGroup:(uncertain?'Order unconfirmed — ':'')+group,flowGroupId:key+'|'+index,flowOrder:uncertain?'unconfirmed':chain.length>1||connected?'verified':'matched',flowReason:uncertain?'No confirmed sequence connects this gauge to another selected gauge.':'BoM river-network connections',flowReferenceDate:reference.retrievedUtc});
+    chains.forEach((chain,index)=>{const station=matched.get(chain[0]),site=stationKey(station.equivalentSite),split=chains.length>1,connected=connectedIds.has(stationKey(station.id)),equivalent=chain.length===1&&!connected&&selectedSites.get(site)?.size>1,uncertain=chain.length===1&&!connected&&!equivalent&&(split||station.method==='named-river-consensus'),group=first.river+(riverBasins.get(wordKey(first.river)).size>1&&first.basin?' ('+first.basin+')':'')+(equivalent?' — same river site':split?' — reach '+(index+1):'');
+      for(const gauge of chain)output.push({...gauge,river:first.river,basin:first.basin,flowGroup:(uncertain?'Order unconfirmed — ':'')+group,flowGroupId:equivalent?'reviewed-site|'+site:key+'|'+index,flowOrder:uncertain?'unconfirmed':equivalent?'equivalent':chain.length>1||connected?'verified':'matched',flowReason:uncertain?'No confirmed sequence connects this gauge to another selected gauge.':equivalent?'Same confirmed river site; no relative order is assigned between these gauges.':'BoM river-network connections',flowReferenceDate:reference.retrievedUtc});
     });
   }
   unknown.sort((a,b)=>wordKey(a.basin).localeCompare(wordKey(b.basin))||wordKey(sourceRiver(a)).localeCompare(wordKey(sourceRiver(b)))||byName(a,b));
@@ -73,4 +75,4 @@ export function orderGaugesByFlow(gauges,reference=null){
 }
 
 export const gaugeFlowLabel=gauge=>gauge.flowGroup||'Order unconfirmed';
-export function gaugeFlowSummary(gauges){const unknown=gauges.filter(gauge=>!gauge.flowOrder||gauge.flowOrder==='unconfirmed').length;return 'River/tributary groups, upstream to downstream where confirmed.'+(unknown?' '+unknown+' order unconfirmed.':'');}
+export function gaugeFlowSummary(gauges){const unknown=gauges.filter(gauge=>!gauge.flowOrder||gauge.flowOrder==='unconfirmed').length,equivalent=gauges.filter(gauge=>gauge.flowOrder==='equivalent').length;return 'River/tributary groups, upstream to downstream where confirmed.'+(equivalent?' '+equivalent+' gauges share a confirmed river site.':'')+(unknown?' '+unknown+' order unconfirmed.':'');}
